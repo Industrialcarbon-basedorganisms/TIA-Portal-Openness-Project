@@ -1,0 +1,192 @@
+﻿<UserControl
+    x:Class="TIA程序生成.Views.LogsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:TIA程序生成.Views"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition />
+            <RowDefinition Height="auto" />
+        </Grid.RowDefinitions>
+        <StackPanel
+            Grid.Row="0"
+            Margin="10"
+            Orientation="Horizontal">
+            <TextBlock
+                Width="auto"
+                Margin="10,5"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="18"
+                Text="开始时间：" />
+            <DatePicker
+                Width="100"
+                materialDesign:CalendarAssist.IsHeaderVisible="False"
+                materialDesign:HintAssist.Hint="Future Date"
+                Foreground="White"
+                Text="{Binding LogsModel.BeginDate, Mode=TwoWay}" />
+            <materialDesign:TimePicker
+                Width="60"
+                Margin="5,0"
+                Foreground="White"
+                Is24Hours="True"
+                Text="{Binding LogsModel.BeginTime, StringFormat='HH:mm'}" />
+            <TextBlock
+                Width="auto"
+                Margin="10,5"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="18"
+                Text="结束时间：" />
+            <DatePicker
+                Width="100"
+                materialDesign:CalendarAssist.IsHeaderVisible="False"
+                materialDesign:HintAssist.Hint="Future Date"
+                Foreground="White"
+                Text="{Binding LogsModel.EndDate, Mode=TwoWay}" />
+            <materialDesign:TimePicker
+                Width="60"
+                Margin="5,0"
+                Foreground="White"
+                Is24Hours="True"
+                Text="{Binding LogsModel.EndTime, StringFormat='HH:mm'}" />
+            <ComboBox
+                Width="100"
+                Margin="5,0"
+                materialDesign:HintAssist.Hint="请选择日志类型"
+                Text="{Binding LogsModel.LogsType}">
+                <ComboBoxItem Content="All" />
+                <ComboBoxItem Content="Verbose" />
+                <ComboBoxItem Content="Debug" />
+                <ComboBoxItem Content="Information" />
+                <ComboBoxItem Content="Warning" />
+                <ComboBoxItem Content="Error" />
+                <ComboBoxItem Content="Fatal" />
+            </ComboBox>
+
+            <Button
+                Width="30"
+                Height="30"
+                Margin="10,0"
+                materialDesign:ButtonProgressAssist.IsIndeterminate="True"
+                materialDesign:ButtonProgressAssist.IsIndicatorVisible="True"
+                materialDesign:ButtonProgressAssist.Value="-1"
+                Command="{Binding ExecuteCommand}"
+                CommandParameter="DatabaseSearch"
+                Style="{StaticResource MaterialDesignFloatingActionButton}">
+                <materialDesign:PackIcon
+                    Width="20"
+                    Height="20"
+                    Kind="DatabaseSearch" />
+            </Button>
+
+
+        </StackPanel>
+
+        <DataGrid
+            Grid.Row="1"
+            Margin="20,10,20,10"
+            AutoGenerateColumns="False"
+            Background="Transparent"
+            CanUserAddRows="False"
+            CanUserSortColumns="False"
+            ItemsSource="{Binding LogsModel.LogsList}">
+            <DataGrid.Columns>
+                <DataGridTextColumn
+                    Width="0.4*"
+                    Binding="{Binding id}"
+                    Header="序号" />
+                <DataGridTextColumn
+                    Width="1.2*"
+                    Binding="{Binding Timestamp}"
+                    Header="时间戳" />
+                <!--<DataGridTextColumn
+                Width="0.7*"
+                Binding="{Binding Level}"
+                Header="级别" />-->
+                <DataGridTemplateColumn Width="0.7*" Header="级别">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border
+                                Width="80"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="{Binding Level, Converter={StaticResource logsTypeToBackgroundConverter}}"
+                                CornerRadius="5">
+                                <TextBlock
+                                    Padding="5,3"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="White"
+                                    Text="{Binding Level}" />
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn
+                    Width="0.5*"
+                    Binding="{Binding Exception}"
+                    Header="异常" />
+                <DataGridTextColumn Width="3*" Binding="{Binding RenderedMessage}" Header="呈现信息">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                            <Setter Property="ToolTipService.ToolTip" Value="{Binding RenderedMessage}" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn
+                    Width="0.5*"
+                    Binding="{Binding Properties}"
+                    Header="属性" />
+            </DataGrid.Columns>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Height" Value="AUTO" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+        <StackPanel
+            Grid.Row="2"
+            Margin="0,5,0,5"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Orientation="Horizontal">
+            <Button
+                Command="{Binding ExecuteCommand}"
+                CommandParameter="First"
+                Content="首页" />
+            <Button
+                Margin="5,0"
+                Command="{Binding ExecuteCommand}"
+                CommandParameter="Previous"
+                Content="上一页" Cursor="Hand" />
+            <TextBlock
+                Margin="5,0"
+                VerticalAlignment="Center"
+                Text="{Binding LogsModel.PageNumText}" />
+            <Button
+                Margin="5,0"
+                Command="{Binding ExecuteCommand}"
+                CommandParameter="Next"
+                Content="下一页" />
+            <Button
+                Margin="5,0"
+                Command="{Binding ExecuteCommand}"
+                CommandParameter="Last"
+                Content="尾页" />
+            <TextBlock
+                Margin="5,0"
+                VerticalAlignment="Center"
+                Text="{Binding LogsModel.TotalCount}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,112 @@
+﻿<UserControl
+    x:Class="TIA程序生成.Views.StartView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:TIA程序生成.Views"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:prism="http://prismlibrary.com/"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
+    <prism:Dialog.WindowStyle>
+        <Style TargetType="Window">
+            <Setter Property="prism:Dialog.WindowStartupLocation" Value="CenterScreen" />
+            <Setter Property="ShowInTaskbar" Value="False" />
+            <Setter Property="WindowStyle" Value="None" />
+            <Setter Property="WindowState" Value="Normal" />
+            <Setter Property="AllowsTransparency" Value="True" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Height" Value="450" />
+            <Setter Property="Width" Value="800" />
+        </Style>
+    </prism:Dialog.WindowStyle>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1.2*" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Border
+            Grid.ColumnSpan="2"
+            Background="{DynamicResource MaterialDesignPaper}"
+            CornerRadius="10" />
+        <Grid>
+            <Image Margin="50" Source="/Assets/Images/back.png" />
+        </Grid>
+        <Grid Grid.Column="1">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto" />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <DockPanel LastChildFill="False">
+                    <Button
+                        Background="Transparent"
+                        BorderBrush="{x:Null}"
+                        Command="{Binding ExecuteCommand}"
+                        CommandParameter="Cancel"
+                        Content="✕"
+                        DockPanel.Dock="Right"
+                        Foreground="Black" />
+                </DockPanel>
+                <StackPanel Grid.Row="1" VerticalAlignment="Center">
+                    <TextBlock
+                        Margin="0,0"
+                        HorizontalAlignment="Center"
+                        DockPanel.Dock="Top"
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Text="欢迎使用" />
+                    <StackPanel
+                        Margin="0,25"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <!--<TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Text="TIA Portal版本：" />-->
+                        <ComboBox
+                            Width="256"
+                            materialDesign:HintAssist.FloatingScale="0.9"
+                            materialDesign:HintAssist.Hint="请选择TIA Portal版本"
+                            FontSize="15"
+                            ItemsSource="{Binding StartModel.TIAPortalVersion, Mode=TwoWay}"
+                            SelectedIndex="0"
+                            Text="{Binding StartModel.SelectedOpennessVersion, Mode=OneWayToSource}" />
+                    </StackPanel>
+                    <!--<StackPanel
+                    Margin="20"
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="18"
+                        FontWeight="Bold"><Run Language="zh-cn" Text="Openness" /><Run Text="版本：" /></TextBlock>
+                    <ComboBox
+                        Width="256"
+                        materialDesign:HintAssist.FloatingScale="0.9"
+                        materialDesign:HintAssist.Hint="请选择Openness版本"
+                        FontSize="15"
+                        ItemsSource="{Binding StartModel.OpennessVersion, Mode=OneWay}"
+                        SelectedIndex="0"
+                        Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                        Text="{Binding LoginUserModel.UserInfo.userName, Mode=OneWayToSource}" />
+                </StackPanel>-->
+                    <Button
+                        Width="256"
+                        Height="40"
+                        Margin="0,0,0,0"
+                        materialDesign:ButtonAssist.CornerRadius="6"
+                        Command="{Binding ExecuteCommand}"
+                        CommandParameter="Login"
+                        Content="登录系统"
+                        Cursor="Hand" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

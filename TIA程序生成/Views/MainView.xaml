@@ -1,0 +1,247 @@
+﻿<Window
+    x:Class="TIA程序生成.Views.MainView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ext="clr-namespace:TIA程序生成.Extensions"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:local="clr-namespace:TIA程序生成.Views"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:prism="http://prismlibrary.com/"
+    xmlns:viewmodels="clr-namespace:TIA程序生成.ViewModels"
+    Title="MainView"
+    Width="1280"
+    Height="768"
+    MaxWidth="{Binding Source={x:Static SystemParameters.PrimaryScreenWidth}}"
+    MaxHeight="{Binding Source={x:Static SystemParameters.PrimaryScreenHeight}}"
+    prism:ViewModelLocator.AutoWireViewModel="True"
+    AllowsTransparency="True"
+    Background="Transparent"
+    FontFamily="微软雅黑"
+    Loaded="Window_Loaded"
+    ResizeMode="NoResize"
+    TextElement.FontSize="13"
+    TextElement.FontWeight="Regular"
+    TextOptions.TextFormattingMode="Ideal"
+    TextOptions.TextRenderingMode="Auto"
+    WindowStartupLocation="CenterScreen"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <md:DialogHost
+        x:Name="DialogHost"
+        DialogTheme="Inherit"
+        Identifier="Root">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="GridLeftMenu" Width="230" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <md:Card
+                Margin="0,-3"
+                Background="{DynamicResource MaterialDesignPaper}"
+                BorderBrush="{DynamicResource MaterialDesignShadowBrush}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto" />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <!--  顶部标题  -->
+                    <DockPanel
+                        Margin="15"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        LastChildFill="False">
+                        <StackPanel x:Name="StackHeader" Orientation="Horizontal">
+                            <Image
+                                Width="20"
+                                Height="20"
+                                VerticalAlignment="Center"
+                                Source="/Assets/Images/flags/logo.ico" />
+                            <TextBlock
+                                Margin="5,0"
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Text="TIA Portal程序生成" />
+                        </StackPanel>
+                        <ToggleButton
+                            x:Name="toggleMenuButton"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            md:ToggleButtonAssist.OnContent="{md:PackIcon Kind=ArrowRight}"
+                            Content="{md:PackIcon Kind=MenuOpen}"
+                            DockPanel.Dock="Right"
+                            Style="{StaticResource MaterialDesignActionToggleButton}"
+                            ToolTip="MaterialDesignActionLightToggleButton" />
+                    </DockPanel>
+
+                    <!--  左侧系统菜单  -->
+                    <ListBox
+                        x:Name="ListMenuBox"
+                        Grid.Row="1"
+                        Margin="10"
+                        ItemContainerStyle="{StaticResource listMenuItemStyle}"
+                        ItemsSource="{Binding MenuBars}"
+                        SelectedIndex="0">
+
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding NavigateCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    Orientation="Horizontal">
+                                    <!--<md:PackIcon Margin="15,0" Kind="{Binding Icon}" />-->
+                                    <Image
+                                        Width="25"
+                                        Height="22"
+                                        Margin="5"
+                                        VerticalAlignment="Center"
+                                        Source="{Binding Icon}"
+                                        ToolTip="{Binding Title}" />
+                                    <TextBlock
+                                        Margin="10,0"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Text="{Binding Title}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </md:Card>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto" />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+
+                <Border
+                    x:Name="HeaderBorder"
+                    Grid.RowSpan="2"
+                    Background="{DynamicResource MaterialDesignCardBackground}" />
+                <md:Snackbar
+                    x:Name="Snackbar"
+                    Panel.ZIndex="1"
+                    MessageQueue="{md:MessageQueue}" />
+                <!--  顶部按钮功能 主题/最小化/最大化/退出系统  -->
+                <md:ColorZone
+                    x:Name="ColorZone"
+                    Grid.RowSpan="2"
+                    Padding="16"
+                    Background="Transparent"
+                    DockPanel.Dock="Top"
+                    Mode="PrimaryMid" />
+                <StackPanel
+                    Margin="6"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Orientation="Horizontal">
+
+                    <Button
+                        x:Name="btnMin"
+                        VerticalAlignment="Center"
+                        Content="{StaticResource Reduce}"
+                        Style="{DynamicResource IconButtonStyle}" />
+                    <Button
+                        x:Name="btnMax"
+                        Margin="5,0"
+                        VerticalAlignment="Center"
+                        Content="{StaticResource MaxWindow}"
+                        Style="{DynamicResource IconButtonStyle}" />
+                    <Button
+                        x:Name="btnClose"
+                        VerticalAlignment="Center"
+                        Content="{StaticResource Close}"
+                        Style="{DynamicResource IconButtonStyle}" />
+                </StackPanel>
+
+                <!--  通知  -->
+                <!--<Popup
+                   Grid.Row="1"
+                   Width="400"
+                   Height="400"
+                   AllowsTransparency="True"
+                   HorizontalOffset="0"
+                   IsOpen="{Binding ElementName=toggleNotification, Path=IsChecked}"
+                   Placement="Bottom"
+                   PlacementTarget="{Binding ElementName=toggleNotification}"
+                   StaysOpen="False"
+                   VerticalOffset="5">
+                   <md:Card Margin="10" Background="{DynamicResource MaterialDesignPaper}">
+                       <Grid>
+                           <Grid.RowDefinitions>
+                               <RowDefinition Height="auto" />
+                               <RowDefinition />
+                               <RowDefinition Height="auto" />
+                           </Grid.RowDefinitions>
+
+                           <TextBlock
+                               Margin="15"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Text="{Binding notificationService.Title}" />
+
+                           <Button
+                               Margin="8,0"
+                               Padding="10,5"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Command="{Binding SettingsCommand}">
+                               <Button.Content>
+                                   <Image
+                                       Width="20"
+                                       Height="20"
+                                       Source="/Assets/Images/menus/setting.png" />
+                               </Button.Content>
+                           </Button>
+
+
+
+                           <DockPanel Grid.Row="2" Margin="5">
+                               <Button
+                                   Margin="5"
+                                   Command="{Binding SetAllNotificationsAsReadCommand}"
+                                   Content="{Binding notificationService.SetAllAsRead}"
+                                   Visibility="{Binding notificationService.IsUnRead, Converter={StaticResource inverseBoolToVisibility}}" />
+                               <Button
+                                   Margin="5"
+                                   Command="{Binding SeeAllNotificationsCommand}"
+                                   Content="{Binding notificationService.SeeAllNotifications}" />
+                           </DockPanel>
+                       </Grid>
+                   </md:Card>
+               </Popup>-->
+
+                <!--  选项卡  -->
+                <!--<controls:TabControl
+                   Grid.Row="1"
+                   HorizontalContentAlignment="Left"
+                   controls:TabCloseItem.CloseClick="OnCloseButtonClick"
+                   md:ElevationAssist.Elevation="Dp1"
+                   prism:RegionManager.RegionName="{x:Static region:AppRegions.Main}"
+                   SelectedIndex="{Binding NavigationService.SelectedIndex}"
+                  >
+                   <TabControl.ItemTemplate>
+                       <DataTemplate>
+                           <TextBlock Foreground="{DynamicResource MaterialDesignBody}" Text="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=controls:TabCloseItem}, Converter={StaticResource menuTitleConverter}}" />
+                       </DataTemplate>
+                   </TabControl.ItemTemplate>
+               </controls:TabControl>-->
+
+
+                <Grid Grid.Row="1">
+                    <!--  用户功能面板  -->
+                    <ContentControl prism:RegionManager.RegionName="{x:Static ext:PrismManager.MainViewRegionName}" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </md:DialogHost>
+</Window>

@@ -1,0 +1,264 @@
+﻿<UserControl
+    x:Class="TIA程序生成.Views.TransitionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Converter="clr-namespace:TIA程序生成.Common.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:local="clr-namespace:TIA程序生成.Views"
+    xmlns:local1="clr-namespace:TIA程序生成.Common.Behaviors"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:prism="http://prismlibrary.com/"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <!--  声明 YourMultiValueConverter  -->
+        <Converter:MyMultiValueConverter x:Key="MyMultiValueConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="2*" />
+        </Grid.RowDefinitions>
+        <Label
+            Margin="20,10"
+            Content="转换助手"
+            FontSize="20"
+            FontWeight="Bold" />
+        <Grid Grid.Row="1" Margin="10,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <materialDesign:Card>
+                <StackPanel>
+                    <Label
+                        Margin="10,10"
+                        Content="校验转换"
+                        FontSize="15"
+                        FontWeight="Bold" />
+                    <TextBox
+                        Margin="10,10"
+                        VerticalAlignment="Top"
+                        materialDesign:HintAssist.Hint="输入字符串"
+                        AcceptsReturn="True"
+                        CharacterCasing="Upper"
+                        Cursor="Arrow"
+                        Style="{StaticResource MaterialDesignFilledTextBox}"
+                        Text="{Binding TransitionDtos.textInputString}"
+                        TextWrapping="Wrap" />
+
+                    <DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3.5*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Margin="10,10"
+                                materialDesign:HintAssist.Hint="显示CRC校验码"
+                                Cursor="Arrow"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding TransitionDtos.textCRC16Check}"
+                                TextWrapping="Wrap" />
+                            <Button
+                                Grid.Column="1"
+                                Margin="5"
+                                Command="{Binding ExecuteCommand}"
+                                CommandParameter="CRC16Check"
+                                Content="CRC16计算"
+                                Cursor="Hand"
+                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                ToolTip="Resource name: MaterialDesignRaisedLightButton" />
+                        </Grid>
+                    </DockPanel>
+
+                    <DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3.5*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Margin="10,10"
+                                materialDesign:HintAssist.Hint="显示XOR校验码"
+                                Cursor="Arrow"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding TransitionDtos.textXORCheck, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                            <Button
+                                Grid.Column="1"
+                                Margin="5"
+                                Command="{Binding ExecuteCommand}"
+                                CommandParameter="XORCheck"
+                                Content="XOR计算"
+                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                ToolTip="Resource name: MaterialDesignRaisedLightButton" />
+                        </Grid>
+                    </DockPanel>
+
+                    <DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3.5*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Margin="10,10"
+                                materialDesign:HintAssist.Hint="显示FCS校验码"
+                                Cursor="Arrow"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding TransitionDtos.textFCSCheck, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                            <Button
+                                Grid.Column="1"
+                                Margin="5"
+                                Command="{Binding ExecuteCommand}"
+                                CommandParameter="FCSCheck"
+                                Content="FCS计算"
+                                Cursor="Hand"
+                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                ToolTip="Resource name: MaterialDesignRaisedLightButton" />
+                        </Grid>
+                    </DockPanel>
+
+                    <DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3.5*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Margin="10,10"
+                                materialDesign:HintAssist.Hint="显示CheckSum校验码"
+                                Cursor="Arrow"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding TransitionDtos.textCheckSumCheck, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                            <Button
+                                Grid.Column="1"
+                                Margin="5"
+                                Command="{Binding ExecuteCommand}"
+                                CommandParameter="CheckSumCheck"
+                                Content="CheckSum计算"
+                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                ToolTip="Resource name: MaterialDesignRaisedLightButton" />
+                        </Grid>
+                    </DockPanel>
+
+                    <DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3.5*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Margin="10,10"
+                                materialDesign:HintAssist.Hint="显示LRC校验码"
+                                Cursor="Arrow"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding TransitionDtos.textLRCCheck, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                            <Button
+                                Grid.Column="1"
+                                Margin="5"
+                                Command="{Binding ExecuteCommand}"
+                                CommandParameter="LRCCheck"
+                                Content="LRC计算"
+                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                ToolTip="Resource name: MaterialDesignRaisedLightButton" />
+                        </Grid>
+                    </DockPanel>
+
+                    <TextBox
+                        Margin="10,10"
+                        materialDesign:HintAssist.Hint="显示完整字符串（含校验码）"
+                        Cursor="Arrow"
+                        IsReadOnly="True"
+                        Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                        Text="{Binding TransitionDtos.textOutputString, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+
+                </StackPanel>
+
+            </materialDesign:Card>
+            <materialDesign:Card Grid.Column="1" Margin="10,0,0,0">
+                <StackPanel>
+                    <Label
+                        Margin="10,10"
+                        Content="进制转换"
+                        FontSize="15"
+                        FontWeight="Bold" />
+                    <ListBox
+                        Grid.Row="1"
+                        Margin="10"
+                        ItemContainerStyle="{StaticResource listMenuItemStyle}"
+                        ItemsSource="{Binding MenuBars}"
+                        SelectedIndex="{Binding TransitionDtos.SelectedIndex, Mode=TwoWay}">
+                        <!--<i:Interaction.Triggers>
+                         <i:EventTrigger EventName="SelectionChanged">
+                             <i:InvokeCommandAction Command="{Binding SelectionChangedCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}}" />
+                         </i:EventTrigger>
+                     </i:Interaction.Triggers>-->
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    Orientation="Horizontal">
+                                    <Label
+                                        Width="50"
+                                        Margin="5"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Content="{Binding DataType}" />
+                                    <TextBox
+                                        Width="400"
+                                        Margin="5"
+                                        InputMethod.IsInputMethodEnabled="False"
+                                        IsReadOnly="False"
+                                        Tag="{Binding DataType}"
+                                        Text="{Binding Data}"
+                                        TextWrapping="Wrap">
+                                        <i:Interaction.Behaviors>
+                                            <local1:TextBoxBehavior Base="{Binding DataType}" />
+                                        </i:Interaction.Behaviors>
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="TextChanged">
+                                                <prism:InvokeCommandAction Command="{Binding DataContext.ConvertCommand, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                                    <prism:InvokeCommandAction.CommandParameter>
+                                                        <MultiBinding Converter="{StaticResource MyMultiValueConverter}">
+                                                            <Binding Path="Tag" RelativeSource="{RelativeSource AncestorType=TextBox}" />
+                                                            <Binding Path="Text" RelativeSource="{RelativeSource AncestorType=TextBox}" />
+                                                        </MultiBinding>
+                                                    </prism:InvokeCommandAction.CommandParameter>
+                                                </prism:InvokeCommandAction>
+                                            </i:EventTrigger>
+                                            <i:EventTrigger EventName="GotFocus">
+                                                <prism:InvokeCommandAction Command="{Binding DataContext.GotFocusCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding Tag, RelativeSource={RelativeSource AncestorType=TextBox}}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                    </TextBox>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+
+
+            </materialDesign:Card>
+        </Grid>
+
+
+
+
+
+    </Grid>
+</UserControl>
