@@ -37,7 +37,6 @@
                 HorizontalAlignment="Center"
                 Cursor=""
                 FontSize="15"
-                Text="B站ID：工业碳基生命体" />
             <TextBlock
                 Margin="10"
                 HorizontalAlignment="Center"
@@ -47,7 +46,6 @@
                 Margin="10"
                 HorizontalAlignment="Center"
                 FontSize="15"
-                Text="部分功能需要后续更新支持" />
 
             <Button
                 x:Name="EmailButton"
