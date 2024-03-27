@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -27,5 +29,7 @@ namespace TIA程序生成.Views
         }
         private void EmailButton_OnClick(object sender, RoutedEventArgs e)
            => Link.OpenInBrowser("mailto://zmx371525@outlook.com");
+        private void BilibiliButton_OnClick(object sender, RoutedEventArgs e)
+          => Process.Start("https://space.bilibili.com/32737701?spm_id_from=333.337.0.0");
     }
 }

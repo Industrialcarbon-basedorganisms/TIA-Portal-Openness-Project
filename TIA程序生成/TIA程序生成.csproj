@@ -613,6 +613,7 @@
     <Resource Include="Assets\Images\info.png" />
     <Resource Include="Assets\Images\interaction.png" />
     <Resource Include="Assets\Images\audit.png" />
+    <Resource Include="Assets\Images\bilibili.png" />
     <Content Include="Assets\Images\logo.ico" />
     <Resource Include="Assets\Images\logout.ico" />
     <Resource Include="Assets\Images\menus\accounts.png" />
