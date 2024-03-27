@@ -36,26 +36,26 @@
                 Margin="10"
                 HorizontalAlignment="Center"
                 FontSize="15"
+<<<<<<<<< Temporary merge branch 1
+                Text="ID：工业碳基生命体" />
+=========
+                Text="B站ID：工业碳基生命体" />
+>>>>>>>>> Temporary merge branch 2
+            <TextBlock
+                Margin="10"
+                HorizontalAlignment="Center"
+                FontSize="15"
                 Text="QQ：247478929" />
             <TextBlock
                 Margin="10"
                 HorizontalAlignment="Center"
                 FontSize="15"
-                Text="后续功能开发中" />
-            <Button
-                x:Name="BilibiliButton"
-                HorizontalAlignment="Center"
-                Click="BilibiliButton_OnClick"
-                Cursor="Hand"
-                Style="{StaticResource MaterialDesignFlatButton}">
-                <StackPanel Orientation="Horizontal">
-                    <Image Source="/Assets/Images/bilibili.png" />
-                    <TextBlock
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        Text="工业碳基生命体" />
-                </StackPanel>
-            </Button>
+<<<<<<<<< Temporary merge branch 1
+                Text="部分功能需要后续更新" />
+=========
+                Text="部分功能需要后续更新支持" />
+>>>>>>>>> Temporary merge branch 2
+
             <Button
                 x:Name="EmailButton"
                 HorizontalAlignment="Center"
