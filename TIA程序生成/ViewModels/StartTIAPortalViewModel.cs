@@ -1355,7 +1355,7 @@ namespace TIA程序生成.ViewModels
 
             // 创建子节点<Engineering>
             XmlElement engineeringElement = doc.CreateElement("Engineering");
-            engineeringElement.SetAttribute("version", $"{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
+            engineeringElement.SetAttribute("version", $"V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
             documentElement.AppendChild(engineeringElement);
 
             // 创建子节点<SW.Blocks.OB>
@@ -1462,9 +1462,13 @@ namespace TIA程序生成.ViewModels
             nameElement.InnerText = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}ModbusMaster";
             attributeListElement.AppendChild(nameElement);
 
-            //创建子节点 < Namespace >，并设置其值为空字符串
-            XmlElement namespaceElement = doc.CreateElement("Namespace");
-            attributeListElement.AppendChild(namespaceElement);
+            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)==18)
+            {
+                //创建子节点 < Namespace >，并设置其值为空字符串
+                XmlElement namespaceElement = doc.CreateElement("Namespace");
+                attributeListElement.AppendChild(namespaceElement);
+            }
+
 
             // 创建子节点<Number>，并设置其值为"1"
             XmlElement numberElement = doc.CreateElement("Number");
@@ -1593,7 +1597,7 @@ namespace TIA程序生成.ViewModels
                         // 将 XML 文档保存到文件中
                         doc.Save($"ModbusMaster.xml");
                         ImportGlobalDB();
-                        _newTIAPortal.ImportBlockGroups($"{Environment.CurrentDirectory}/ModbusMaster.xml",$"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}Group");
+                        _newTIAPortal.ImportBlockGroups($"{Environment.CurrentDirectory}/ModbusMaster.xml", $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}Group");
                         _newTIAPortal.ImportBlockGroups($"{Environment.CurrentDirectory}/ModbusMasterDB.xml", $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}Group");
                         _newTIAPortal.CreateInstanceDB();
                         File.Delete($"{Environment.CurrentDirectory}/ModbusMaster.xml");
@@ -1628,7 +1632,7 @@ namespace TIA程序生成.ViewModels
 
             // 创建子节点<Engineering>
             XmlElement engineeringElement = doc.CreateElement("Engineering");
-            engineeringElement.SetAttribute("version", $"{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
+            engineeringElement.SetAttribute("version", $"V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
             documentElement.AppendChild(engineeringElement);
 
             // 创建子节点<SW.Blocks.OB>
@@ -1771,10 +1775,12 @@ namespace TIA程序生成.ViewModels
             XmlElement name = doc.CreateElement("Name");
             name.InnerText = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB";
             attributeListElement.AppendChild(name);
-
-            // 创建 Namespace 元素（这里没有内容，所以创建一个空元素）
-            XmlElement namespaceElement = doc.CreateElement("Namespace");
-            attributeListElement.AppendChild(namespaceElement);
+            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion) == 18)
+            {
+                //// 创建 Namespace 元素（这里没有内容，所以创建一个空元素）
+                XmlElement namespaceElement = doc.CreateElement("Namespace");
+                attributeListElement.AppendChild(namespaceElement);
+            }
 
             // 创建 Number 元素
             XmlElement number = doc.CreateElement("Number");
