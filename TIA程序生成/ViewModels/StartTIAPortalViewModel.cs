@@ -1355,7 +1355,7 @@ namespace TIA程序生成.ViewModels
 
             // 创建子节点<Engineering>
             XmlElement engineeringElement = doc.CreateElement("Engineering");
-            engineeringElement.SetAttribute("version", ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion));
+            engineeringElement.SetAttribute("version", $"{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
             documentElement.AppendChild(engineeringElement);
 
             // 创建子节点<SW.Blocks.OB>
@@ -1628,7 +1628,7 @@ namespace TIA程序生成.ViewModels
 
             // 创建子节点<Engineering>
             XmlElement engineeringElement = doc.CreateElement("Engineering");
-            engineeringElement.SetAttribute("version", ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion));
+            engineeringElement.SetAttribute("version", $"{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
             documentElement.AppendChild(engineeringElement);
 
             // 创建子节点<SW.Blocks.OB>
