@@ -2,7 +2,7 @@
 TIA Portal Openness是西门子提供的一个用于工程组态工作流自动化的API，它允许开发者通过编程与TIA Portal软件进行交互，实现自动化和个性化的工程组态。通过TIA Portal Openness，开发者可以更加灵活地利用TIA Portal的功能，为自动化工程提供更加高效和定制化的解决方案。<br>
 我使用TIA Portal Openness开发了一个自动生成Modbus程序的软件，通过输入简单的参数配置如波特率、校验、从站站号、读/写、地址、长度、数据类型、名称，即可自动生成一个包含了轮询和变量表的完整Modbus程序。
 # 开始
-点开项目<TIA程序生成>中的引用，查看是否存在Siemens.Engineering和Siemens.Engineering.Hmi，如果不存在则鼠标右键添加应用，点击浏览查找路径：C:\Program Files\Siemens\Automation\Portal V*\PublicAPI\V*\Siemens.Engineering.dll和C:\Program Files\Siemens\Automation\Portal V*\PublicAPI\V*\Siemens.Engineering.Hmi.dll，引用Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll，然后清理解决方案-重新生成解决方案。
+点开项目<TIA程序生成>中的引用，查看Siemens.Engineering和Siemens.Engineering.Hmi是否有异常，如果不存在则鼠标右键添加应用，点击浏览查找路径：C:\Program Files\Siemens\Automation\Portal V*\PublicAPI\V*\Siemens.Engineering.dll和C:\Program Files\Siemens\Automation\Portal V*\PublicAPI\V*\Siemens.Engineering.Hmi.dll，引用Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll，然后清理解决方案-重新生成解决方案。
 # 支持的TIA Portal版本
 TIA Portal V14 SP1<br>
 TIA Portal V15<br>
