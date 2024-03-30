@@ -82,7 +82,7 @@ namespace TIA程序生成.Common.Interfaces
                 if (guiTIA)
                 {
                     Log.Information("选择的是带用户页面的TIA Portal。");
-                    instTIA = new TiaPortal(TiaPortalMode.WithUserInterface);        
+                    instTIA = new TiaPortal(TiaPortalMode.WithUserInterface);
                 }
                 //打开一个新的不带用户界面的TIA Portal实例
                 else
@@ -105,21 +105,30 @@ namespace TIA程序生成.Common.Interfaces
         /// <param name="prjName"></param>
         /// <param name="prjAuthor"></param>
         /// <param name="prjComment"></param>
-        public void CreateTIAprj(string prjPath, string prjName, string prjAuthor, string prjComment)
+        public string CreateTIAprj(string prjPath, string prjName, string prjAuthor, string prjComment)
         {
-            prjAuthor = prjAuthor == null ? "" : prjAuthor;
-            prjComment = prjComment == null ? "" : prjComment;
-            // 创建新的目录信息
-            DirectoryInfo targetDirectory = new DirectoryInfo(prjPath);
-            //创建新的TIA Port 项目
-            ProjectComposition projectComposition = instTIA.Projects;
-            IEnumerable<KeyValuePair<string, object>> createParameters = new[] {
+            string error=string.Empty;
+            try
+            {
+                prjAuthor = prjAuthor == null ? "" : prjAuthor;
+                prjComment = prjComment == null ? "" : prjComment;
+                // 创建新的目录信息
+                DirectoryInfo targetDirectory = new DirectoryInfo(prjPath);
+                //创建新的TIA Port 项目
+                ProjectComposition projectComposition = instTIA.Projects;
+                IEnumerable<KeyValuePair<string, object>> createParameters = new[] {
                 new KeyValuePair<string, object>("TargetDirectory", targetDirectory),//必填
                 new KeyValuePair<string, object>("Name", prjName),//必填
                 new KeyValuePair<string, object>("Author", prjAuthor),//可选
                 new KeyValuePair<string, object>("Comment", prjComment)}; //可选
                                                                           //创建一个包含必填和可选参数的项目
-            ((IEngineeringComposition)projectComposition).Create(typeof(Project), createParameters);
+                projectTIA = (Project)((IEngineeringComposition)projectComposition).Create(typeof(Project), createParameters);
+            }
+            catch(Exception ex)
+            {
+                error = ex.Message;
+            }
+           return error;
         }
 
         /// <summary>
@@ -171,7 +180,10 @@ namespace TIA程序生成.Common.Interfaces
                     {
                         instTIA = tiaPortalProcess.Attach();
                         projectTIA = instTIA.Projects[0];
-                        plcDevice = projectTIA.Devices[0];
+                        if (projectTIA.Devices.Count > 0)
+                        {
+                            plcDevice = projectTIA.Devices[0];
+                        }
                     }
                     else
                     {
@@ -194,17 +206,17 @@ namespace TIA程序生成.Common.Interfaces
         /// <returns></returns>
         public List<string> GetTiaPortalDevices()
         {
-                //List<string> list = projectTIA.Devices
-                //     .SelectMany(item => item.Items[0].Items)
-                //     .Where(rack => !string.IsNullOrEmpty(rack.Name))
-                //     .Select(rack => rack.Items[0].Name)
-                //     .ToList();
-                List<string> list = instTIA.Projects
-                       .SelectMany(project => project.Devices)
-                       .Select(item => item.Items[0])
-                       .Select(rack => rack.Items[0].Name)
-                       .ToList();
-                return list;
+            //List<string> list = projectTIA.Devices
+            //     .SelectMany(item => item.Items[0].Items)
+            //     .Where(rack => !string.IsNullOrEmpty(rack.Name))
+            //     .Select(rack => rack.Items[0].Name)
+            //     .ToList();
+            List<string> list = instTIA.Projects
+                   .SelectMany(project => project.Devices)
+                   .Select(item => item.Items[0])
+                   .Select(rack => rack.Items[0].Name)
+                   .ToList();
+            return list;
         }
 
         /// <summary>
@@ -280,35 +292,33 @@ namespace TIA程序生成.Common.Interfaces
             return blockNames;
         }
 
-       
+
 
         /// <summary>
         /// 将块导出至Xml文件
         /// </summary>
         /// <param name="blockExportPath"></param>
         /// <param name="blockName"></param>
-        public void ExportRegularBlock(string blockExportPath, string blockName)
+        public string ExportRegularBlock(string blockExportPath, string blockName)
         {
+            string error=string.Empty;
             int spaceIndex = blockName.IndexOf(' ');
             string blockNameTemp = blockName.Substring(0, spaceIndex);
             try
             {
                 dataBlock = plcSoftware.BlockGroup.Blocks.Find(blockNameTemp);
-                if (dataBlock == null)
-                {
-                    return;
-                }
-                else
+                if (dataBlock != null)
                 {
                     dataBlock.Export(new FileInfo($"{blockExportPath}\\{blockNameTemp}.xml"),
-              ExportOptions.WithDefaults);
+                                ExportOptions.WithDefaults);
                 }
             }
             catch (Exception ex)
             {
                 Log.Fatal($"导出块'{blockName}'时发生错误：{ex.Message}");
-                MessageBox.Show(ex.Message);
+                error = ex.Message;
             }
+            return error;
         }
 
         /// <summary>
@@ -317,7 +327,7 @@ namespace TIA程序生成.Common.Interfaces
         /// <param name="blockImportPath"></param>
         public bool ImportBlocks(string blockImportPath)
         {
-            bool error =false;
+            bool error = false;
             if (plcSoftware != null)
             {
                 PlcBlockGroup blockGroup = plcSoftware.BlockGroup;
@@ -337,11 +347,12 @@ namespace TIA程序生成.Common.Interfaces
             PlcBlockUserGroupComposition userGroupComposition = plcsoftware.BlockGroup.Groups;
             PlcBlockUserGroup plcBlockUserGroup = userGroupComposition.Find("MyUserfolder");
         }
+
         /// <summary>
         /// 导入用户组的块
         /// </summary>
         /// <param name="blockImportPath"></param>
-        public bool ImportBlockGroups(string blockImportPath,string GroupName)
+        public bool ImportBlockGroups(string blockImportPath, string GroupName)
         {
             bool error = false;
             if (plcSoftware != null)
@@ -358,7 +369,7 @@ namespace TIA程序生成.Common.Interfaces
                 {
                     IList<PlcBlock> blocks = plcBlockUserGroup.Blocks.Import(new FileInfo(blockImportPath),
                ImportOptions.Override);
-                }   
+                }
             }
             else
             {
@@ -383,7 +394,7 @@ namespace TIA程序生成.Common.Interfaces
                 }
                 else
                 {
-   
+
                 }
                 if (plcBlockModbus_Master_DB == null)
                 {
@@ -408,9 +419,9 @@ namespace TIA程序生成.Common.Interfaces
         public List<string> GetPortName(int number)
         {
             List<string> ports = new List<string>();
-           
-                if (number <= projectTIA.Devices.Count)
-                {
+
+            if (number < projectTIA.Devices.Count)
+            {
                 ports = projectTIA.Devices[number].Items[0].Items
                       .Where(DeviceItem => DeviceItem.Name.StartsWith("CM") || DeviceItem.Name.StartsWith("CB"))
                       .Select(DeviceItem => DeviceItem.Name)

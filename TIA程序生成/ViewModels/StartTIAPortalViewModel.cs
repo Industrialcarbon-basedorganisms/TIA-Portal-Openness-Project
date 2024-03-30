@@ -251,8 +251,18 @@ namespace TIA程序生成.ViewModels
 
         private void ExportRegularBlock()
         {
+            if (string.IsNullOrWhiteSpace(StartTIAPortalModel.TiaPortalDevicesPlcBlockName))
+            {
+                var dialogResult = dialogHostService.Question("温馨提示", "请选择要导出的块。");
+                Log.Warning("导出块时未选择块名称。");
+                return;
+            }
             Log.Information($"将'{StartTIAPortalModel.TiaPortalDevicesPlcBlockName}'块导出到路径：{StartTIAPortalModel.BlockExportPath}。");
-            _newTIAPortal.ExportRegularBlock(StartTIAPortalModel.BlockExportPath, StartTIAPortalModel.TiaPortalDevicesPlcBlockName);
+           string message= _newTIAPortal.ExportRegularBlock(StartTIAPortalModel.BlockExportPath, StartTIAPortalModel.TiaPortalDevicesPlcBlockName);
+            if(!string.IsNullOrWhiteSpace(message))
+            {
+                var dialogResult = dialogHostService.Question("温馨提示", message);
+            }
             Log.Information($"将'{StartTIAPortalModel.TiaPortalDevicesPlcBlockName}'块导出到路径：{StartTIAPortalModel.BlockExportPath}成功。");
         }
 
@@ -453,12 +463,18 @@ namespace TIA程序生成.ViewModels
                 }
                 Log.Information($"在{StartTIAPortalModel.SelectPath}路径中创建'{StartTIAPortalModel.ProjectName}'项目。");
                 UpdateLoading(true);
+                string message=string.Empty;
                 await Task.Run(async () =>
                 {
                     //创建TIA Portal项目，文件路径和项目名必填，项目作者和项目注释可选填。
-                    _newTIAPortal.CreateTIAprj(@"" + StartTIAPortalModel.SelectPath, StartTIAPortalModel.ProjectName, StartTIAPortalModel.ProjectAuthor, StartTIAPortalModel.ProjectComment);
+                  message=  _newTIAPortal.CreateTIAprj(@"" + StartTIAPortalModel.SelectPath, StartTIAPortalModel.ProjectName, StartTIAPortalModel.ProjectAuthor, StartTIAPortalModel.ProjectComment);
                 });
                 UpdateLoading(false);
+                if (!string.IsNullOrWhiteSpace(message))
+                {
+                    Log.Warning($"创建项目中发生错误：{message}。");
+                    var dialogResult = dialogHostService.Question("温馨提示", message); return;
+                }
                 Log.Information($"'{StartTIAPortalModel.ProjectName}'项目创建成功。");
             }
         }
