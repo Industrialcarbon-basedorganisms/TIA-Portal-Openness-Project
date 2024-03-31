@@ -25,7 +25,7 @@
                 HorizontalAlignment="Center"
                 Cursor=""
                 FontSize="15"
-                Text="V1.02" />
+                Text="V1.03" />
             <TextBlock
                 Margin="10"
                 HorizontalAlignment="Center"

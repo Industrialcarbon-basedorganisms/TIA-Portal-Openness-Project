@@ -15,7 +15,7 @@
             <RowDefinition Height="auto" />
             <RowDefinition Height="auto" />
         </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal">
+        <StackPanel Margin="5" Orientation="Horizontal">
             <TextBlock
                 VerticalAlignment="Center"
                 FontWeight="Bold"
@@ -28,7 +28,10 @@
             </Button>
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal">
+        <StackPanel
+            Grid.Row="1"
+            Margin="5"
+            Orientation="Horizontal">
             <TextBlock
                 VerticalAlignment="Center"
                 FontWeight="Bold"
@@ -56,11 +59,14 @@
                 Text="\PublicAPI\*" />
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal">
+        <StackPanel
+            Grid.Row="2"
+            Margin="5,15,5,5"
+            Orientation="Horizontal">
             <Button
                 Command="{Binding ExecuteCommand}"
                 CommandParameter="CheakPath"
-                Content="检查路径"/>
+                Content="检查路径" />
         </StackPanel>
     </Grid>
 </UserControl>
