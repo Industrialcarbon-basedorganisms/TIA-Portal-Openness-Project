@@ -94,6 +94,7 @@ namespace TIA程序生成.Common.Interfaces
             catch (Exception ex)
             {
                 var dialogResult = _dialogHostService.Question("致命错误", ex.Message);
+                return null; // 返回 null 表示创建失败
             }
             return instTIA;
         }
@@ -211,11 +212,20 @@ namespace TIA程序生成.Common.Interfaces
             //     .Where(rack => !string.IsNullOrEmpty(rack.Name))
             //     .Select(rack => rack.Items[0].Name)
             //     .ToList();
-            List<string> list = instTIA.Projects
-                   .SelectMany(project => project.Devices)
-                   .Select(item => item.Items[0])
-                   .Select(rack => rack.Items[0].Name)
-                   .ToList();
+            List<string> list=new List<string>();
+            try
+            {
+                 list = instTIA.Projects
+                  .SelectMany(project => project.Devices)
+                  .Select(item => item.Items[0])
+                  .Select(rack => rack.Items[0].Name)
+                  .ToList();
+            }
+            catch(Exception ex)
+            {
+                Log.Fatal(ex.Message);
+                MessageBox.Show(ex.Message);
+            }
             return list;
         }
 
@@ -227,47 +237,52 @@ namespace TIA程序生成.Common.Interfaces
         public List<string> ConnectTiaPortalDevices(string plcName)
         {
             List<string> list = new List<string>();
-            if (!string.IsNullOrWhiteSpace(plcName))
+            try
             {
-                if (projectTIA != null)
+                if (!string.IsNullOrWhiteSpace(plcName))
                 {
-                    foreach (var item in projectTIA.Devices)
+                    if (projectTIA != null)
                     {
-                        DeviceItem rack = item.Items[0];
-                        if (rack.Items[0].Name == plcName)
+                        foreach (var item in projectTIA.Devices)
                         {
-                            SoftwareContainer softwareContainer =
-                            ((IEngineeringServiceProvider)rack.Items[0]).GetService<SoftwareContainer>();
-                            if (softwareContainer != null)
+                            DeviceItem rack = item.Items[0];
+                            if (rack.Items[0].Name == plcName)
                             {
-                                plcSoftware = softwareContainer.Software as PlcSoftware;
+                                SoftwareContainer softwareContainer =
+                                ((IEngineeringServiceProvider)rack.Items[0]).GetService<SoftwareContainer>();
+                                if (softwareContainer != null)
+                                {
+                                    plcSoftware = softwareContainer.Software as PlcSoftware;
+                                }
                             }
+
+                        }
+                        // 检查 plcSoftware 是否为 null
+                        if (plcSoftware == null || plcSoftware.BlockGroup == null || plcSoftware.BlockGroup.Blocks == null)
+                        {
+                            return new List<string>(); // 返回空列表
                         }
 
+                        // 使用 LINQ 查询来构建结果列表
+                        list = plcSoftware.BlockGroup.Blocks
+                            .Select(block => block != null ? $"{block.Name} [{block.ToString().Substring(block.ToString().Length - 2, 2)}{block.Number}]" : null)
+                            .Where(name => name != null) // 过滤掉 null 值
+                            .ToList();
                     }
-                    // 检查 plcSoftware 是否为 null
-                    if (plcSoftware == null || plcSoftware.BlockGroup == null || plcSoftware.BlockGroup.Blocks == null)
+                    else
                     {
-                        return new List<string>(); // 返回空列表
+                        var dialogResult = _dialogHostService.Question("温馨提示", "请打开项目。");
                     }
-
-                    // 使用 LINQ 查询来构建结果列表
-                    list = plcSoftware.BlockGroup.Blocks
-                        .Select(block => block != null ? $"{block.Name} [{block.ToString().Substring(block.ToString().Length - 2, 2)}{block.Number}]" : null)
-                        .Where(name => name != null) // 过滤掉 null 值
-                        .ToList();
                 }
                 else
                 {
-                    var dialogResult = _dialogHostService.Question("温馨提示", "请打开项目。");
+                    var dialogResult = _dialogHostService.Question("温馨提示", "请输入驱动名。");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                var dialogResult = _dialogHostService.Question("温馨提示", "请输入驱动名。");
+                MessageBox.Show($"连接项目时发生错误{ex.Message}");
             }
-
-
             return list;
         }
 
@@ -419,14 +434,20 @@ namespace TIA程序生成.Common.Interfaces
         public List<string> GetPortName(int number)
         {
             List<string> ports = new List<string>();
-
-            if (number < projectTIA.Devices.Count)
+            try
             {
-                ports = projectTIA.Devices[number].Items[0].Items
-                      .Where(DeviceItem => DeviceItem.Name.StartsWith("CM") || DeviceItem.Name.StartsWith("CB"))
-                      .Select(DeviceItem => DeviceItem.Name)
-                      .ToList();
+                if (number < projectTIA.Devices.Count)
+                {
+                    ports = projectTIA.Devices[number].Items[0].Items
+                          .Where(DeviceItem => DeviceItem.Name.StartsWith("CM") || DeviceItem.Name.StartsWith("CB"))
+                          .Select(DeviceItem => DeviceItem.Name)
+                          .ToList();
+                }
             }
+            catch(Exception ex)
+            {
+                MessageBox.Show($"获取通讯模块时发生错误{ex.Message}");
+            } 
             return ports;
         }
 

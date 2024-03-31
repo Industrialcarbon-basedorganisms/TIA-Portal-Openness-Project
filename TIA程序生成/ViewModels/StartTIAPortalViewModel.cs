@@ -42,6 +42,8 @@ using Siemens.Engineering.SW;
 using Prism.Events;
 using TIA程序生成.Events;
 using Serilog;
+using System.Reflection;
+using Newtonsoft.Json;
 
 namespace TIA程序生成.ViewModels
 {
@@ -60,7 +62,8 @@ namespace TIA程序生成.ViewModels
         private static PlcSoftware plcSoftware;
         private static PlcBlock dataBlock;
         ushort mb_No;
-
+        bool detectionResult = false;
+        string readData = string.Empty;
         public StartTIAPortalViewModel(IDialogHostService dialogHostService, TIA_Portal newTIAPortal, CheckVersion checkVersion, IContainerProvider provider)
             : base(provider)
         {
@@ -72,33 +75,45 @@ namespace TIA程序生成.ViewModels
             ExecuteDelCommand = new DelegateCommand<object>(ExecuteDel);
             _newTIAPortal = newTIAPortal;
             SelectedOpennessVersion = OpennessVersion.Default.Version;
-            GetTiaPortalProcess();
+            string readJson = File.ReadAllText("SelectPath.json");
+            readData = JsonConvert.DeserializeObject<dynamic>(readJson);
             InitializationCheck();
-
+            if (detectionResult)
+            {
+                GetTiaPortalProcess();
+            }
         }
 
+       
 
         private async void Execute(string obj)
         {
-            switch (obj)
+            if (detectionResult)
             {
-                case "OpenTIAPortal": OpenTIAPortal(); break;
-                case "CreateProject": CreateProject(); break;
-                case "SelectPath": SelectPath(); break;
-                case "SelectFile": SelectFile(); break;
-                case "OpenFile": OpenFile(); break;
-                case "CreatePLC": CreateData(); break;
-                case "GetTiaPortalProcess": GetTiaPortalProcess(); break;
-                case "ConnectTIAprj": ConnectTIAprj(); break;
-                case "GetTiaPortalDevices": GetTiaPortalDevices(); break;
-                case "ConnectTiaPortalDevices": ConnectTiaPortalDevices(); break;
-                case "ExportRegularBlock": ExportRegularBlock(); break;
-                case "BlockExportPath": BlockExportPath(); break;
-                case "ImportBlocks": ImportBlocks(); break;
-                case "ImportPrograms": ImportPrograms1(); break;
-                case "SelectImportBlockPath": SelectImportBlockPath(); break;
-                case "CreateModbusData": CreateModbusData(); break;
-                case "CleanModbusData": CleanModbusData(); break;
+                switch (obj)
+                {
+                    case "OpenTIAPortal": OpenTIAPortal(); break;
+                    case "CreateProject": CreateProject(); break;
+                    case "SelectPath": SelectPath(); break;
+                    case "SelectFile": SelectFile(); break;
+                    case "OpenFile": OpenFile(); break;
+                    case "CreatePLC": CreateData(); break;
+                    case "GetTiaPortalProcess": GetTiaPortalProcess(); break;
+                    case "ConnectTIAprj": ConnectTIAprj(); break;
+                    case "GetTiaPortalDevices": GetTiaPortalDevices(); break;
+                    case "ConnectTiaPortalDevices": ConnectTiaPortalDevices(); break;
+                    case "ExportRegularBlock": ExportRegularBlock(); break;
+                    case "BlockExportPath": BlockExportPath(); break;
+                    case "ImportBlocks": ImportBlocks(); break;
+                    case "ImportPrograms": ImportPrograms1(); break;
+                    case "SelectImportBlockPath": SelectImportBlockPath(); break;
+                    case "CreateModbusData": CreateModbusData(); break;
+                    case "CleanModbusData": CleanModbusData(); break;
+                }
+            }
+            else 
+            {
+                var dialogResult1 = dialogHostService.Question("温馨提示", "缺少DLL文件，请检查TIA Portal安装路径，在系统设置页更改路径。");
             }
         }
 
@@ -158,6 +173,30 @@ namespace TIA程序生成.ViewModels
                     }
                 }
             }
+
+            if (File.Exists($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\Siemens.Engineering.dll"))
+            {
+
+            }
+            else
+            { 
+                detectionResult = false;
+                Log.Error("Siemens.Engineering.dll文件不存在。");
+                var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll文件不存在，请检查TIA Portal安装路径，在系统设置页更改路径。");
+                return;
+            }
+
+            if (File.Exists($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
+            {
+                detectionResult = true;
+            }
+            else
+            {
+                detectionResult = false;
+                Log.Error("Siemens.Engineering.Hmi.dll文件不存在。");
+                var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.Hmi.dll文件不存在，请检查TIA Portal安装路径，在系统设置页更改路径");
+            }
+
         }
         private void CreateModbusData()
         {
@@ -334,25 +373,35 @@ namespace TIA程序生成.ViewModels
 
         private async void GetTiaPortalProcess()
         {
-            Log.Information("获取TiaPortal进程。");
-            UpdateLoading(true);
-            await Task.Run(async () =>
-            {
-                //获取TiaPortal进程
-                IEnumerable<TiaPortalProcess> processes = TiaPortal.GetProcesses();
-                StartTIAPortalModel.TiaPortalProcess = processes
-                   .Select(process => process.ProjectPath?.Name)
-                   .Where(name => !string.IsNullOrEmpty(name))
-                   .ToList();
-            });
-            UpdateLoading(false);
-            StringBuilder tiaPortalProcess = new StringBuilder(50);
-            for (int i = 0; i < StartTIAPortalModel.TiaPortalProcess.Count; i++)
-            {
-                tiaPortalProcess.Append(StartTIAPortalModel.TiaPortalProcess[i]);
-                tiaPortalProcess.Append(i == StartTIAPortalModel.TiaPortalProcess.Count-1 ? "。" : "，");
-            }
-            Log.Information($"获取TiaPortal进程成功。获取到的进程:{tiaPortalProcess}");
+            //try
+            //{
+                Log.Information("获取TiaPortal进程。");
+                UpdateLoading(true);
+                await Task.Run(async () =>
+                {
+                    //获取TiaPortal进程
+                    IEnumerable<TiaPortalProcess> processes = TiaPortal.GetProcesses();
+                    StartTIAPortalModel.TiaPortalProcess = processes
+                       .Select(process => process.ProjectPath?.Name)
+                       .Where(name => !string.IsNullOrEmpty(name))
+                       .ToList();
+                });
+                UpdateLoading(false);
+                StringBuilder tiaPortalProcess = new StringBuilder(50);
+                for (int i = 0; i < StartTIAPortalModel.TiaPortalProcess.Count; i++)
+                {
+                    tiaPortalProcess.Append(StartTIAPortalModel.TiaPortalProcess[i]);
+                    tiaPortalProcess.Append(i == StartTIAPortalModel.TiaPortalProcess.Count - 1 ? "。" : "，");
+                }
+                Log.Information($"获取TiaPortal进程成功。获取到的进程:{tiaPortalProcess}");
+            //}
+            //catch (Exception ex)
+            //{
+            //    //var dialogResult = dialogHostService.Question("致命错误", ex.Message);
+            //    System.Windows.MessageBox.Show(ex.Message);
+            //    Log.Error(ex.ToString());
+            //}
+           
         }
 
         private async void CreateData()

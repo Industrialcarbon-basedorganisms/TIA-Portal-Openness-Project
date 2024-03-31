@@ -29,54 +29,39 @@ namespace TIA程序生成.Common.Interfaces
         }
         public bool GetPlcSoftware()
         {
+            bool isInGroup=false;
+            try 
+            {
+                // 获取当前用户的 Windows 身份对象
+                WindowsIdentity currentIdentity = WindowsIdentity.GetCurrent();
+                WindowsPrincipal currentPrincipal = new WindowsPrincipal(currentIdentity);
 
-            // 获取当前用户的 Windows 身份对象
-            WindowsIdentity currentIdentity = WindowsIdentity.GetCurrent();
-            WindowsPrincipal currentPrincipal = new WindowsPrincipal(currentIdentity);
+                // 指定要检查的用户组
+                string groupName = "Siemens TIA Openness";
 
-            // 指定要检查的用户组
-            string groupName = "Siemens TIA Openness";
-
-            // 检查当前用户是否属于指定的用户组
-            bool isInGroup = currentPrincipal.IsInRole(groupName);
-
+                // 检查当前用户是否属于指定的用户组
+                isInGroup = currentPrincipal.IsInRole(groupName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
             return isInGroup;
         }
 
         public List<string> GetEngineeringVersions()
         {
-            List<string> list = FnGetEngineeringVersions();
-            if (list != null && list.Count > 0)
+            List<string> list=new List<string>();
+            try
             {
-                SelectedEngineeringVersion = list.FirstOrDefault();
-
-                if (string.IsNullOrEmpty(SelectedEngineeringVersion))
-                {
-                    SelectedEngineeringVersion = list.FirstOrDefault();
-                }
-            }
-            else
-            {
-
-            }
-            return list;
-
-        }
-
-        public List<string> GetOpennessApiVersions()
-        {
-            List<string> list = new List<string>();
-
-            if (!string.IsNullOrEmpty(SelectedEngineeringVersion))
-            {
-                list = GetAssemblies(SelectedEngineeringVersion);
+                list = FnGetEngineeringVersions();
                 if (list != null && list.Count > 0)
                 {
-                    SelectedOpennessApiVersion = list.FirstOrDefault();
+                    SelectedEngineeringVersion = list.FirstOrDefault();
 
-                    if (string.IsNullOrEmpty(SelectedOpennessApiVersion))
+                    if (string.IsNullOrEmpty(SelectedEngineeringVersion))
                     {
-                        SelectedOpennessApiVersion = string.Empty;
+                        SelectedEngineeringVersion = list.FirstOrDefault();
                     }
                 }
                 else
@@ -84,7 +69,40 @@ namespace TIA程序生成.Common.Interfaces
 
                 }
             }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            return list;
+        }
 
+        public List<string> GetOpennessApiVersions()
+        {
+            List<string> list = new List<string>();
+            try
+            {
+                if (!string.IsNullOrEmpty(SelectedEngineeringVersion))
+                {
+                    list = GetAssemblies(SelectedEngineeringVersion);
+                    if (list != null && list.Count > 0)
+                    {
+                        SelectedOpennessApiVersion = list.FirstOrDefault();
+
+                        if (string.IsNullOrEmpty(SelectedOpennessApiVersion))
+                        {
+                            SelectedOpennessApiVersion = string.Empty;
+                        }
+                    }
+                    else
+                    {
+
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
             return list;
         }
 
@@ -94,81 +112,97 @@ namespace TIA程序生成.Common.Interfaces
         /// <returns></returns>
         public static List<string> FnGetEngineeringVersions()
         {
-            RegistryKey key = GetRegistryKey("SOFTWARE\\Siemens\\Automation\\Openness\\");
-
-            if (key != null)
+            try
             {
-                try
+                RegistryKey key = GetRegistryKey("SOFTWARE\\Siemens\\Automation\\Openness\\");
+
+                if (key != null)
                 {
-                    var names = key.GetSubKeyNames().OrderBy(x => x).ToList();
+                    try
+                    {
+                        var names = key.GetSubKeyNames().OrderBy(x => x).ToList();
 
-                    var result = (from item in names
-                                  where Convert.ToDecimal(item.Substring(0, 4)) >= Convert.ToDecimal("V15.0".Substring(1, 4))
-                                  select item.Substring(0, 4)).ToList();
+                        var result = (from item in names
+                                      where Convert.ToDecimal(item.Substring(0, 4)) >= Convert.ToDecimal("V15.0".Substring(1, 4))
+                                      select item.Substring(0, 4)).ToList();
 
-                    key.Dispose();
+                        key.Dispose();
 
-                    return result;
-                }
-                finally
-                {
-                    key.Dispose();
+                        return result;
+                    }
+                    finally
+                    {
+                        key.Dispose();
+                    }
                 }
             }
-
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
             return new List<string>();
         }
 
         private static RegistryKey GetRegistryKey(string keyName)
         {
-            RegistryKey baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            RegistryKey key = baseKey.OpenSubKey(keyName);
-            if (key == null)
+            if (string.IsNullOrWhiteSpace(keyName))
             {
-                baseKey.Dispose();
-                baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Default);
-                key = baseKey.OpenSubKey(keyName);
+                MessageBox.Show("keyName为空");
             }
-            if (key == null)
-            {
+                RegistryKey baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+                RegistryKey key = baseKey.OpenSubKey(keyName);
+                if (key == null)
+                {
+                    baseKey.Dispose();
+                    baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Default);
+                    key = baseKey.OpenSubKey(keyName);
+                }
+                if (key == null)
+                {
+                    baseKey.Dispose();
+                    baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+                    key = baseKey.OpenSubKey(keyName);
+                }
                 baseKey.Dispose();
-                baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
-                key = baseKey.OpenSubKey(keyName);
-            }
-            baseKey.Dispose();
-
-            return key;
+                return key;
         }
 
         public static List<string> GetAssemblies(string version)
         {
-            RegistryKey key = GetRegistryKey("SOFTWARE\\Siemens\\Automation\\Openness\\" + version);
 
-            if (key != null)
+            try 
             {
-                try
+                RegistryKey key = GetRegistryKey("SOFTWARE\\Siemens\\Automation\\Openness\\" + version);
+
+                if (key != null)
                 {
-                    var subKey = key.OpenSubKey("PublicAPI");
-
-                    if (subKey != null)
+                    try
                     {
-                        var subKeys = subKey.GetSubKeyNames().OrderBy(x => x).ToList();
+                        var subKey = key.OpenSubKey("PublicAPI");
 
-                        var result = (from item in subKeys
-                                      where Convert.ToDecimal(item.Substring(0, 4)) >= Convert.ToDecimal("V15.0".Substring(1, 4))
-                                      select item.Substring(0, 4)).ToList();
+                        if (subKey != null)
+                        {
+                            var subKeys = subKey.GetSubKeyNames().OrderBy(x => x).ToList();
 
-                        subKey.Dispose();
+                            var result = (from item in subKeys
+                                          where Convert.ToDecimal(item.Substring(0, 4)) >= Convert.ToDecimal("V15.0".Substring(1, 4))
+                                          select item.Substring(0, 4)).ToList();
 
-                        return result;
+                            subKey.Dispose();
+
+                            return result;
+                        }
+                    }
+                    finally
+                    {
+                        key.Dispose();
                     }
                 }
-                finally
-                {
-                    key.Dispose();
-                }
             }
-
+            catch(Exception ex) 
+            { 
+                MessageBox.Show(ex.Message);
+            }
             return new List<string>();
         }
 

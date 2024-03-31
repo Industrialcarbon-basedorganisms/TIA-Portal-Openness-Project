@@ -189,6 +189,7 @@
     <Compile Include="Common\Models\MenuBar.cs" />
     <Compile Include="Common\Models\StartModel.cs" />
     <Compile Include="Common\Models\StartTIAPortalModel.cs" />
+    <Compile Include="Common\Models\SystemSettingsModel.cs" />
     <Compile Include="Common\Models\TaskBar.cs" />
     <Compile Include="Common\Models\TransitionDtos.cs" />
     <Compile Include="Events\Link.cs" />
@@ -216,6 +217,7 @@
     <Compile Include="ViewModels\SkinViewModel.cs" />
     <Compile Include="ViewModels\StartTIAPortalViewModel.cs" />
     <Compile Include="ViewModels\StartViewModel.cs" />
+    <Compile Include="ViewModels\SystemSettingsViewModel.cs" />
     <Compile Include="ViewModels\TransitionViewModel.cs" />
     <Compile Include="Views\AboutView.xaml.cs">
       <DependentUpon>AboutView.xaml</DependentUpon>
@@ -253,6 +255,9 @@
     <Compile Include="Common\Interfaces\TIA_Portal.cs" />
     <Compile Include="Views\StartView.xaml.cs">
       <DependentUpon>StartView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SystemSettingsView.xaml.cs">
+      <DependentUpon>SystemSettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\TransitionView.xaml.cs">
       <DependentUpon>TransitionView.xaml</DependentUpon>
@@ -306,6 +311,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\StartView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\SystemSettingsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

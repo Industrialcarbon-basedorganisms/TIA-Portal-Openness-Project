@@ -1,5 +1,6 @@
 ﻿using DryIoc;
 using Microsoft.Win32;
+using Newtonsoft.Json;
 using Prism.Commands;
 using Prism.Events;
 using Prism.Mvvm;
@@ -40,34 +41,67 @@ namespace TIA程序生成.ViewModels
 
         public event Action<IDialogResult> RequestClose;
 
+        bool _isDisposed = false;
+
+        string readData=string.Empty;
         public StartViewModel(IEventAggregator aggregator, IDialogHostService dialogHostService, CheckVersion checkVersion)
         {
-            StartModel=new StartModel();
+            StartModel = new StartModel();
             this.dialogHostService = dialogHostService;
             this.aggregator = aggregator;
             this._newCheckVersion = checkVersion;
             ExecuteCommand = new DelegateCommand<string>(Execute);
-            StartModel.TIAPortalVersion= _newCheckVersion.GetEngineeringVersions();
+            StartModel.TIAPortalVersion = _newCheckVersion.GetEngineeringVersions();
             StartModel.OpennessVersion = _newCheckVersion.GetOpennessApiVersions();
             AppDomain.CurrentDomain.AssemblyResolve += MyResolver;
+            CheakSelectPath();
         }
 
-        private  Assembly MyResolver(object sender, ResolveEventArgs args)
+        private void CheakSelectPath()
         {
-            int index = args.Name.IndexOf(',');
-            if (index == -1)
+            string jsonFilePath = @"SelectPath.json";
+            if (File.Exists(jsonFilePath))
             {
-                return null;
+                string readJson = File.ReadAllText("SelectPath.json");
+                readData = JsonConvert.DeserializeObject<dynamic>(readJson);
             }
-            string name = args.Name.Substring(0, index);
-            if (name == "Siemens.Engineering")
+            else
             {
-                return Assembly.LoadFrom($"C:\\Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                // 将数据转换为 JSON 字符串
+                string json = JsonConvert.SerializeObject("C:\\");
+                // 保存到文件
+                File.WriteAllText("SelectPath.json", json);
+                CheakSelectPath();
             }
-            else if (name == "Siemens.Engineering.Hmi")
+        }
+
+
+        private Assembly MyResolver(object sender, ResolveEventArgs args)
+        {
+            try
             {
-                return Assembly.LoadFrom($"C:\\Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                int index = args.Name.IndexOf(',');
+                if (index == -1)
+                {
+                    return null;
+                }
+                string name = args.Name.Substring(0, index);
+
+                if (name == "Siemens.Engineering")
+                {
+                    return Assembly.LoadFrom($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                }
+                else if (name == "Siemens.Engineering.Hmi")
+                {
+                    return Assembly.LoadFrom($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                _isDisposed = true;
+            }
+
             return null;
         }
 
@@ -79,7 +113,7 @@ namespace TIA程序生成.ViewModels
                 if (number % 1 != 0)
                 {
                     // 保留原始浮点数
-                    return number; 
+                    return number;
                 }
                 else
                 {
@@ -105,7 +139,7 @@ namespace TIA程序生成.ViewModels
 
         public void OnDialogOpened(IDialogParameters parameters)
         {
-           
+
         }
 
         private void Execute(string obj)
@@ -117,11 +151,11 @@ namespace TIA程序生成.ViewModels
             }
         }
 
-        private async void  Login()
+        private async void Login()
         {
             Log.Information($"选择TIA Portal版本为V{StartModel.SelectedOpennessVersion}。");
             RequestClose?.Invoke(new DialogResult(ButtonResult.OK));
-            OpennessVersion.Default.Version= StartModel.SelectedOpennessVersion;
+            OpennessVersion.Default.Version = StartModel.SelectedOpennessVersion;
         }
 
         private StartModel startModel;

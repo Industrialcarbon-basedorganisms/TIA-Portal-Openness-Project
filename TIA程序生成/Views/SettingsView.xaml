@@ -2,6 +2,7 @@
     x:Class="TIA程序生成.Views.SettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:TIA程序生成.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:ext="clr-namespace:TIA程序生成.Extensions"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"

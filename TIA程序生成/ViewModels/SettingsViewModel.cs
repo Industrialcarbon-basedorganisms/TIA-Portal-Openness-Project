@@ -1,6 +1,7 @@
 ﻿using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Regions;
+using Siemens.Engineering.SW.Blocks;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TIA程序生成.Common.Models;
 using TIA程序生成.Extensions;
+using TIA程序生成.Views;
 
 namespace TIA程序生成.ViewModels
 {
@@ -44,7 +46,7 @@ namespace TIA程序生成.ViewModels
         void CreateMenuBar()
         {
             MenuBars.Add(new MenuBar() { Icon = "Palette", Title = "个性化", NameSpace = "SkinView" });
-            MenuBars.Add(new MenuBar() { Icon = "Cog", Title = "系统设置", NameSpace = "" });
+            MenuBars.Add(new MenuBar() { Icon = "Cog", Title = "系统设置", NameSpace = "SystemSettingsView" });
 
         }
 

@@ -63,6 +63,7 @@ namespace TIA程序生成
             containerRegistry.RegisterForNavigation<StartTIAPortalView, StartTIAPortalViewModel>();
             containerRegistry.RegisterForNavigation<StartView, StartViewModel>();
             containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
+            containerRegistry.RegisterForNavigation<SystemSettingsView, SystemSettingsViewModel>();
             containerRegistry.RegisterForNavigation<SkinView, SkinViewModel>();
             containerRegistry.RegisterForNavigation<AboutView, AboutViewModel>();
             containerRegistry.RegisterForNavigation<TransitionView, TransitionViewModel>();

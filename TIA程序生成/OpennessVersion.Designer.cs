@@ -12,7 +12,7 @@ namespace TIA程序生成 {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.8.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.7.0.0")]
     internal sealed partial class OpennessVersion : global::System.Configuration.ApplicationSettingsBase {
         
         private static OpennessVersion defaultInstance = ((OpennessVersion)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new OpennessVersion())));
@@ -32,6 +32,18 @@ namespace TIA程序生成 {
             }
             set {
                 this["Version"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string dllPath {
+            get {
+                return ((string)(this["dllPath"]));
+            }
+            set {
+                this["dllPath"] = value;
             }
         }
     }
