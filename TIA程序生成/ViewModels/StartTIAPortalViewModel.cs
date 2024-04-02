@@ -1527,7 +1527,7 @@ namespace TIA程序生成.ViewModels
             nameElement.InnerText = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}ModbusMaster";
             attributeListElement.AppendChild(nameElement);
 
-            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)==18)
+            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)>=18)
             {
                 //创建子节点 < Namespace >，并设置其值为空字符串
                 XmlElement namespaceElement = doc.CreateElement("Namespace");
@@ -1840,7 +1840,7 @@ namespace TIA程序生成.ViewModels
             XmlElement name = doc.CreateElement("Name");
             name.InnerText = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB";
             attributeListElement.AppendChild(name);
-            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion) == 18)
+            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion) >= 18)
             {
                 //// 创建 Namespace 元素（这里没有内容，所以创建一个空元素）
                 XmlElement namespaceElement = doc.CreateElement("Namespace");
