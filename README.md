@@ -10,7 +10,7 @@ TIA Portal V15 SP1<br>
 TIA Portal V16<br>
 TIA Portal V17 (已测试）<br>
 TIA Portal V18 (已测试）<br>
-TIA Portal V19<br>
+TIA Portal V19 (已测试 by胡佳）<br>
 # 支持的框架
 .NET Framework 4.8.1
 # 编译
@@ -21,3 +21,4 @@ Visual Studio 2022（可以免费下载 Community Edition）
 打开带项目的TIA Portal程序，PLC中组态通信模块（目前尚不支持CB信号板和ET200的CM模块），以管理员身份运行Visual Studio 2022,启动程序之后软件会检测当前登录账户是否在Siemens TIA Openness用户组，如果不在Siemens TIA Openness用户软件会弹窗提示，用户可选择由软件添加用户组还是自行添加用户组，添加完成后重启计算机。
 # 致谢
 luis.SPS.standard   https://www.youtube.com/@luis.sps.standard7444
+胡佳（测试TIA Portal V19） QQ:2859299484
