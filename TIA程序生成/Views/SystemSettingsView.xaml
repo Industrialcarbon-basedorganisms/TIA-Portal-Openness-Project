@@ -56,7 +56,7 @@
             <TextBlock
                 VerticalAlignment="Center"
                 FontWeight="Bold"
-                Text="\PublicAPI\*" />
+                Text="\*" />
         </StackPanel>
 
         <StackPanel
