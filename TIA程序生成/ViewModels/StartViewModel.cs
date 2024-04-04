@@ -68,7 +68,7 @@ namespace TIA程序生成.ViewModels
             else
             {
                 // 将数据转换为 JSON 字符串
-                string json = JsonConvert.SerializeObject("C:\\");
+                string json = JsonConvert.SerializeObject("C:\\Program Files\\Siemens\\Automation");
                 // 保存到文件
                 File.WriteAllText("SelectPath.json", json);
                 CheakSelectPath();
