@@ -87,13 +87,22 @@ namespace TIA程序生成.ViewModels
                 }
                 string name = args.Name.Substring(0, index);
 
+                //if (name == "Siemens.Engineering")
+                //{
+                //    return Assembly.LoadFrom($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                //}
+                //else if (name == "Siemens.Engineering.Hmi")
+                //{
+                //    return Assembly.LoadFrom($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                //}
+
                 if (name == "Siemens.Engineering")
                 {
-                    return Assembly.LoadFrom($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                    return Assembly.LoadFrom($"{readData}\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
                 }
                 else if (name == "Siemens.Engineering.Hmi")
                 {
-                    return Assembly.LoadFrom($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
+                    return Assembly.LoadFrom($"{readData}\\Portal V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(StartModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll");
                 }
             }
             catch (Exception ex)

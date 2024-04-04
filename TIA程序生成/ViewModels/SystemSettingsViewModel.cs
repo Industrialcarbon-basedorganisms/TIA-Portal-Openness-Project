@@ -39,7 +39,33 @@ namespace TIA程序生成.ViewModels
 
         private void CheakPath()
         {
-            if (File.Exists($"{SystemSettingsModel.SelectPath}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll"))
+            //if (File.Exists($"{SystemSettingsModel.SelectPath}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll"))
+            //{
+
+            //}
+            //else
+            //{
+            //    Log.Error("Siemens.Engineering.dll文件不存在。");
+            //    var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll文件不存在，请检查TIA Portal安装路径，在系统设置页更改路径。");
+            //    return;
+            //}
+
+            //if (File.Exists($"{SystemSettingsModel.SelectPath}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
+            //{
+            //    var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll存在，路径正确。");
+            //    // 将数据转换为 JSON 字符串
+            //    string json = JsonConvert.SerializeObject(SystemSettingsModel.SelectPath);
+            //    // 保存到文件
+            //    File.WriteAllText("SelectPath.json", json);
+            //    Log.Error($"Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll路径{SystemSettingsModel.SelectPath}修改成功。");
+            //}
+            //else
+            //{
+            //    Log.Error("Siemens.Engineering.Hmi.dll文件不存在。");
+            //    var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.Hmi.dll文件不存在，请检查TIA Portal安装路径，在系统设置页更改路径");
+            //}
+
+            if (File.Exists($"{SystemSettingsModel.SelectPath}\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.dll"))
             {
 
             }
@@ -50,7 +76,7 @@ namespace TIA程序生成.ViewModels
                 return;
             }
 
-            if (File.Exists($"{SystemSettingsModel.SelectPath}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
+            if (File.Exists($"{SystemSettingsModel.SelectPath}\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
             {
                 var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll存在，路径正确。");
                 // 将数据转换为 JSON 字符串

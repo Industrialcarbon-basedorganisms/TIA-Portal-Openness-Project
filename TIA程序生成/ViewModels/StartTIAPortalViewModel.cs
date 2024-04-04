@@ -174,7 +174,7 @@ namespace TIA程序生成.ViewModels
                 }
             }
 
-            if (File.Exists($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\Siemens.Engineering.dll"))
+            if (File.Exists($"{readData}\\Portal V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\Siemens.Engineering.dll"))
             {
 
             }
@@ -186,7 +186,7 @@ namespace TIA程序生成.ViewModels
                 return;
             }
 
-            if (File.Exists($"{readData}Program Files\\Siemens\\Automation\\Portal V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
+            if (File.Exists($"{readData}\\Portal V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
             {
                 detectionResult = true;
             }
@@ -353,22 +353,30 @@ namespace TIA程序生成.ViewModels
 
         private async void ConnectTIAprj()
         {
-            if (string.IsNullOrWhiteSpace(StartTIAPortalModel.TiaPortalProcessName))
+            try 
             {
-                Log.Warning("连接进程之前未输入已打开的项目名。");
-                var dialogResult = dialogHostService.Question("温馨提示", "请输入已打开的项目名。"); return;
+                if (string.IsNullOrWhiteSpace(StartTIAPortalModel.TiaPortalProcessName))
+                {
+                    Log.Warning("连接进程之前未输入已打开的项目名。");
+                    var dialogResult = dialogHostService.Question("温馨提示", "请输入已打开的项目名。"); return;
+                }
+                Log.Information($"连接TIA Portal中'{StartTIAPortalModel.TiaPortalProcessName}'进程。");
+                UpdateLoading(true);
+                await Task.Run(async () =>
+                {
+                    //连接博途项目，并接收返回的项目中驱动的名字
+                    projectTIA = _newTIAPortal.ConnectTIAprj(StartTIAPortalModel.TiaPortalProcessName);
+                    StartTIAPortalModel.TiaPortalDevicesName = _newTIAPortal.GetTiaPortalDevices();
+                    StartTIAPortalModel.TiaPortalPortName = _newTIAPortal.GetPortName(StartTIAPortalModel.SelectedIndexPort);
+                });
+                UpdateLoading(false);
+                Log.Information($"连接TIA Portal中'{StartTIAPortalModel.TiaPortalProcessName}'进程成功。");
             }
-            Log.Information($"连接TIA Portal中'{StartTIAPortalModel.TiaPortalProcessName}'进程。");
-            UpdateLoading(true);
-            await Task.Run(async () =>
+            catch (Exception ex) 
             {
-                //连接博途项目，并接收返回的项目中驱动的名字
-                projectTIA = _newTIAPortal.ConnectTIAprj(StartTIAPortalModel.TiaPortalProcessName);
-                StartTIAPortalModel.TiaPortalDevicesName = _newTIAPortal.GetTiaPortalDevices();
-                StartTIAPortalModel.TiaPortalPortName = _newTIAPortal.GetPortName(StartTIAPortalModel.SelectedIndexPort);
-            });
-            UpdateLoading(false);
-            Log.Information($"连接TIA Portal中'{StartTIAPortalModel.TiaPortalProcessName}'进程成功。");
+                System.Windows.MessageBox.Show(ex.Message );
+            }
+          
         }
 
         private async void GetTiaPortalProcess()

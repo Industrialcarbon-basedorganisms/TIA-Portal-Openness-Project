@@ -36,10 +36,14 @@
                 VerticalAlignment="Center"
                 FontWeight="Bold"
                 Text="{Binding SystemSettingsModel.SelectPath}" />
+            <!--<TextBlock
+                VerticalAlignment="Center"
+                FontWeight="Bold"
+                Text="Program Files\Siemens\Automation\Portal V" />-->
             <TextBlock
                 VerticalAlignment="Center"
                 FontWeight="Bold"
-                Text="Program Files\Siemens\Automation\Portal V" />
+                Text="Portal V" />
             <TextBlock
                 VerticalAlignment="Center"
                 FontWeight="Bold"
