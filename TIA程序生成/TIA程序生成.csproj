@@ -342,6 +342,8 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <Resource Include="Assets\Fonts\iconfont.ttf" />
+    <None Include="bin\Debug\TIAPortalInstructionData.db" />
+    <None Include="bin\Release\TIAPortalInstructionData.db" />
     <None Include="OpennessVersion.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>OpennessVersion.Designer.cs</LastGenOutput>
