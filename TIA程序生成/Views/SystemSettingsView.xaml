@@ -19,7 +19,7 @@
             <TextBlock
                 VerticalAlignment="Center"
                 FontWeight="Bold"
-                Text="请选择路径：" />
+                Text="请补齐路径：" />
             <Button
                 Command="{Binding ExecuteCommand}"
                 CommandParameter="SelectPath"

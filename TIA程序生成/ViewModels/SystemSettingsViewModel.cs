@@ -78,7 +78,7 @@ namespace TIA程序生成.ViewModels
 
             if (File.Exists($"{SystemSettingsModel.SelectPath}\\Portal V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\PublicAPI\\V{ConvertToDoubleWithNoTrailingZeros(SystemSettingsModel.SelectedOpennessVersion)}\\Siemens.Engineering.Hmi.dll"))
             {
-                var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll存在，路径正确。");
+                var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll和Siemens.Engineering.Hmi.dll存在，路径正确，请重新打开软件。");
                 // 将数据转换为 JSON 字符串
                 string json = JsonConvert.SerializeObject(SystemSettingsModel.SelectPath);
                 // 保存到文件
