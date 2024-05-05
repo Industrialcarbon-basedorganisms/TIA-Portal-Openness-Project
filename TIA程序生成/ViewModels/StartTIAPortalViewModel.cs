@@ -44,6 +44,12 @@ using TIA程序生成.Events;
 using Serilog;
 using System.Reflection;
 using Newtonsoft.Json;
+using static TIA程序生成.Common.Models.Configuration;
+using System.Xml.Serialization;
+using Siemens.Engineering.CrossReference;
+using Access = TIA程序生成.Common.Models.Configuration.Access;
+using System.Diagnostics.Metrics;
+using DryIoc;
 
 namespace TIA程序生成.ViewModels
 {
@@ -84,7 +90,7 @@ namespace TIA程序生成.ViewModels
             }
         }
 
-       
+
 
         private async void Execute(string obj)
         {
@@ -111,12 +117,223 @@ namespace TIA程序生成.ViewModels
                     case "CleanModbusData": CleanModbusData(); break;
                 }
             }
-            else 
+            else
             {
                 var dialogResult1 = dialogHostService.Question("温馨提示", "缺少DLL文件，请检查TIA Portal安装路径，在系统设置页更改路径。");
             }
         }
 
+
+
+        //private void ImportProgramsxml()
+        //{
+
+        //}
+
+
+        private string ImportProgramsxml(string originalXml, int ID, string[] ConstantValue, string[] ComponentValues, string[] TextIndex, string ComponentName)
+        {
+
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(originalXml);
+
+            // 为命名空间定义一个前缀
+            string prefix = "ns";
+            int constantValueIndex = 0;
+            // 为XmlNamespaceManager设置命名空间
+            XmlNamespaceManager nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsManager.AddNamespace(prefix, "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
+            // 使用带有命名空间的XPath表达式选择所有的ConstantValue节点并替换文本
+            XmlNodeList constantValueNodes = xmlDoc.SelectNodes("//" + prefix + ":ConstantValue", nsManager);
+            foreach (XmlNode constantValueNode in constantValueNodes)
+            {
+                if (constantValueNode.NodeType == XmlNodeType.Element)
+                {
+                    constantValueNode.InnerText = ConstantValue[constantValueIndex];
+                    constantValueIndex++;
+                }
+            }
+
+            // 选择所有的ID属性并替换它们的值
+            XmlNodeList idAttributes = xmlDoc.SelectNodes("//@ID");
+            foreach (XmlNode idAttribute in idAttributes)
+            {
+                if (idAttribute is XmlAttribute)
+                {
+                    idAttribute.Value = String.Format("{0:X}", ID);
+                    ID++;
+                }
+            }
+
+            int arrayIndex = 0;
+            // 为命名空间创建XmlNamespaceManager
+            XmlNamespaceManager nsManager1 = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsManager1.AddNamespace("ns", "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
+
+            // 使用命名空间前缀的XPath选择所有Symbol节点
+            XmlNodeList symbolNodes = xmlDoc.SelectNodes("//ns:Symbol", nsManager1);
+
+            foreach (XmlNode symbolNode in symbolNodes)
+            {
+                // 在每个Symbol节点中，选择所有Component节点（本地选择，不使用//）
+                XmlNodeList componentNodes = symbolNode.SelectNodes("ns:Component", nsManager1);
+
+                foreach (XmlNode componentNode in componentNodes)
+                {
+                    if (componentNode.Attributes["Name"] != null)
+                    {
+                        componentNode.Attributes["Name"].Value = ComponentValues[arrayIndex];
+                        arrayIndex++;
+                    }
+                }
+            }
+
+            XmlNodeList constantNodes = xmlDoc.SelectNodes("//ns:Constant", nsManager1);
+            foreach (XmlNode constantNode in constantNodes)
+            {
+                if (constantNode.Attributes["Name"] != null)
+                {
+                    constantNode.Attributes["Name"].Value = ComponentName;
+                    arrayIndex++;
+                }
+            }
+
+            int textIndex = 0;
+            XmlNodeList textNodes = xmlDoc.SelectNodes("//Text");
+            foreach (XmlNode textNode in textNodes)
+            {
+                if (textNode.NodeType == XmlNodeType.Element)
+                {
+                    textNode.InnerText = TextIndex[textIndex];
+                    textIndex++;
+                }
+            }
+            return xmlDoc.OuterXml.ToString();
+        }
+
+        private void ImportProgramsxml123(string Name, int Number, string ProgrammingLanguage, string[] Items)
+        {
+            // 创建Document对象，并填充其属性
+            Configuration.Document document = new Configuration.Document
+            {
+                Engineering = new Configuration.Engineering { Version = "V18" },
+                SWBlocksOB = new Configuration.SWBlocksOB
+                {
+                    ID = 0,
+                    AttributeList = new Configuration.BlockAttributeList
+                    {
+                        Name = Name,
+                        Namespace = string.Empty, // 虽然是空的，但仍然需要一个值
+                        Number = Number,
+                        ProgrammingLanguage = ProgrammingLanguage,
+                    },
+
+                    ObjectList = new Configuration.BlockObjectList
+                    {
+                        Items = new List<object>()
+                    }
+                }
+            };
+
+            // 为MultilingualText创建多个条目
+            int multilingualTextID = 1; // 用于唯一标识MultilingualText的ID
+            int multilingualTextItemID = 2; // 用于唯一标识MultilingualTextItem的ID
+            // 现在Items列表已确保被初始化，可以安全地添加新项
+            document.SWBlocksOB.ObjectList.Items.Add(new Configuration.MultilingualText
+            {
+                ID = multilingualTextID++,
+                ObjectList = new Configuration.ObjectList
+                {
+                    // 假设MultilingualTextItem的CompositionName是固定的
+                    MultilingualTextItem = new Configuration.MultilingualTextItem
+                    {
+                        ID = multilingualTextItemID++,
+                        CompositionName = "Items",
+                        AttributeList = new Configuration.AttributeList
+                        {
+                            Culture = "zh-CN",
+                            Text = "sd"
+                        }
+                    }
+                }
+            });
+
+            for (int i = 0; i < 5; i++)
+            {
+                document.SWBlocksOB.ObjectList.Items.Add(new Configuration.SWBlocksCompileUnit
+                {
+                    ID = i + 1,
+                    CompositionName = $"ZMX{i}",
+                    AttributeList = new Configuration.SWBlocksCompileUnitAttributeList
+                    {
+                        NetworkSource = new SWBlocksCompileUnitNetworkSource
+                        {
+                            FlgNet = new SWBlocksCompileUnitFlgNet
+                            {
+
+                            }
+                        }
+                    },
+                    ObjectList = new Configuration.SWBlocksCompileUnitObjectList
+                    {
+                        MultilingualTexts = new List<Configuration.MultilingualText>
+                        {
+                           new Configuration.MultilingualText
+                           {
+                                ID = multilingualTextID++,
+                                ObjectList=new ObjectList
+                                {
+                                    MultilingualTextItem=new Configuration.MultilingualTextItem
+                                    {
+                                        ID= multilingualTextID++,
+                                        AttributeList = new Configuration.AttributeList
+                                        {
+                                            Culture = "zh-CN",
+                                            Text = "sd"
+                                        }
+                                    }
+                                }
+                           },
+                           new Configuration.MultilingualText
+                           {
+                                ID = multilingualTextID++,
+                                ObjectList=new ObjectList
+                                {
+                                    MultilingualTextItem=new Configuration.MultilingualTextItem
+                                    {
+                                        ID= multilingualTextID++,
+                                        AttributeList = new Configuration.AttributeList
+                                        {
+                                            Culture = "zh-CN",
+                                            Text = "sd"
+                                        }
+                                    }
+                                }
+                           }
+                        }
+                    }
+                });
+            }
+            //创建我们自己的命名空间
+            XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
+
+            //添加一个空的命名空间和空的值
+            ns.Add("", "");
+
+            // 创建XmlSerializer的实例，指定要序列化的类型
+            XmlSerializer serializer = new XmlSerializer(typeof(Configuration.Document));
+
+            // 指定要保存的XML文件路径
+            string filePath = "document.xml";
+
+            // 使用FileStream来写入文件
+            using (FileStream fs = new FileStream(filePath, FileMode.Create))
+            {
+                // 执行序列化，将对象转换为XML格式并写入文件
+                serializer.Serialize(fs, document, ns);
+                System.Windows.MessageBox.Show("XML file saved to: " + filePath);
+            }
+        }
 
         private async void ImportPrograms1()
         {
@@ -179,7 +396,7 @@ namespace TIA程序生成.ViewModels
 
             }
             else
-            { 
+            {
                 detectionResult = false;
                 Log.Error("Siemens.Engineering.dll文件不存在。");
                 var dialogResult1 = dialogHostService.Question("温馨提示", "Siemens.Engineering.dll文件不存在，请检查TIA Portal安装路径，在系统设置页更改路径。");
@@ -297,8 +514,8 @@ namespace TIA程序生成.ViewModels
                 return;
             }
             Log.Information($"将'{StartTIAPortalModel.TiaPortalDevicesPlcBlockName}'块导出到路径：{StartTIAPortalModel.BlockExportPath}。");
-           string message= _newTIAPortal.ExportRegularBlock(StartTIAPortalModel.BlockExportPath, StartTIAPortalModel.TiaPortalDevicesPlcBlockName);
-            if(!string.IsNullOrWhiteSpace(message))
+            string message = _newTIAPortal.ExportRegularBlock(StartTIAPortalModel.BlockExportPath, StartTIAPortalModel.TiaPortalDevicesPlcBlockName);
+            if (!string.IsNullOrWhiteSpace(message))
             {
                 var dialogResult = dialogHostService.Question("温馨提示", message);
             }
@@ -353,7 +570,7 @@ namespace TIA程序生成.ViewModels
 
         private async void ConnectTIAprj()
         {
-            try 
+            try
             {
                 if (string.IsNullOrWhiteSpace(StartTIAPortalModel.TiaPortalProcessName))
                 {
@@ -372,36 +589,36 @@ namespace TIA程序生成.ViewModels
                 UpdateLoading(false);
                 Log.Information($"连接TIA Portal中'{StartTIAPortalModel.TiaPortalProcessName}'进程成功。");
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(ex.Message );
+                System.Windows.MessageBox.Show(ex.Message);
             }
-          
+
         }
 
         private async void GetTiaPortalProcess()
         {
             //try
             //{
-                Log.Information("获取TiaPortal进程。");
-                UpdateLoading(true);
-                await Task.Run(async () =>
-                {
-                    //获取TiaPortal进程
-                    IEnumerable<TiaPortalProcess> processes = TiaPortal.GetProcesses();
-                    StartTIAPortalModel.TiaPortalProcess = processes
-                       .Select(process => process.ProjectPath?.Name)
-                       .Where(name => !string.IsNullOrEmpty(name))
-                       .ToList();
-                });
-                UpdateLoading(false);
-                StringBuilder tiaPortalProcess = new StringBuilder(50);
-                for (int i = 0; i < StartTIAPortalModel.TiaPortalProcess.Count; i++)
-                {
-                    tiaPortalProcess.Append(StartTIAPortalModel.TiaPortalProcess[i]);
-                    tiaPortalProcess.Append(i == StartTIAPortalModel.TiaPortalProcess.Count - 1 ? "。" : "，");
-                }
-                Log.Information($"获取TiaPortal进程成功。获取到的进程:{tiaPortalProcess}");
+            Log.Information("获取TiaPortal进程。");
+            UpdateLoading(true);
+            await Task.Run(async () =>
+            {
+                //获取TiaPortal进程
+                IEnumerable<TiaPortalProcess> processes = TiaPortal.GetProcesses();
+                StartTIAPortalModel.TiaPortalProcess = processes
+                   .Select(process => process.ProjectPath?.Name)
+                   .Where(name => !string.IsNullOrEmpty(name))
+                   .ToList();
+            });
+            UpdateLoading(false);
+            StringBuilder tiaPortalProcess = new StringBuilder(50);
+            for (int i = 0; i < StartTIAPortalModel.TiaPortalProcess.Count; i++)
+            {
+                tiaPortalProcess.Append(StartTIAPortalModel.TiaPortalProcess[i]);
+                tiaPortalProcess.Append(i == StartTIAPortalModel.TiaPortalProcess.Count - 1 ? "。" : "，");
+            }
+            Log.Information($"获取TiaPortal进程成功。获取到的进程:{tiaPortalProcess}");
             //}
             //catch (Exception ex)
             //{
@@ -409,7 +626,7 @@ namespace TIA程序生成.ViewModels
             //    System.Windows.MessageBox.Show(ex.Message);
             //    Log.Error(ex.ToString());
             //}
-           
+
         }
 
         private async void CreateData()
@@ -520,11 +737,11 @@ namespace TIA程序生成.ViewModels
                 }
                 Log.Information($"在{StartTIAPortalModel.SelectPath}路径中创建'{StartTIAPortalModel.ProjectName}'项目。");
                 UpdateLoading(true);
-                string message=string.Empty;
+                string message = string.Empty;
                 await Task.Run(async () =>
                 {
                     //创建TIA Portal项目，文件路径和项目名必填，项目作者和项目注释可选填。
-                  message=  _newTIAPortal.CreateTIAprj(@"" + StartTIAPortalModel.SelectPath, StartTIAPortalModel.ProjectName, StartTIAPortalModel.ProjectAuthor, StartTIAPortalModel.ProjectComment);
+                    message = _newTIAPortal.CreateTIAprj(@"" + StartTIAPortalModel.SelectPath, StartTIAPortalModel.ProjectName, StartTIAPortalModel.ProjectAuthor, StartTIAPortalModel.ProjectComment);
                 });
                 UpdateLoading(false);
                 if (!string.IsNullOrWhiteSpace(message))
@@ -536,1093 +753,12 @@ namespace TIA程序生成.ViewModels
             }
         }
 
-        static void CreateCompileUnitTypeAElement(XmlDocument doc, XmlElement parentElement, int id, string programmingLanguage, string titleText, string commentText)
-        {
-            // 创建 <SW.Blocks.CompileUnit> 元素
-            XmlElement compileUnitElement = doc.CreateElement("SW.Blocks.CompileUnit");
-            compileUnitElement.SetAttribute("ID", id.ToString("X"));
-            compileUnitElement.SetAttribute("CompositionName", "CompileUnits");
 
-            // 创建 <AttributeList> 元素
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
 
-            // 创建 NetworkSource 元素
-            XmlElement networkSourceElement = doc.CreateElement("NetworkSource");
-
-            // 创建 FlgNet 元素
-            XmlElement flgNetElement = doc.CreateElement("FlgNet");
-            flgNetElement.SetAttribute("xmlns", "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
-
-            // 添加 <FlgNet> 元素的子元素
-            XmlElement partsElement = doc.CreateElement("Parts");
-
-            AddSymbolElement(doc, partsElement, 21, true, "FirstScan");
-            AddConstantElement(doc, partsElement, 22, "USInt.4");
-            AddSymbolElement(doc, partsElement, 23, true, "Modbus_Comm_Load_DB.MODE");
-            // 添加 <Part> 元素
-            XmlElement partAElement = doc.CreateElement("Part");
-            partAElement.SetAttribute("Name", "Contact");
-            partAElement.SetAttribute("UId", "24");
-            partsElement.AppendChild(partAElement);
-
-            // 添加 <Part> 元素
-            XmlElement partElement = doc.CreateElement("Part");
-            partElement.SetAttribute("Name", "Move");
-            partElement.SetAttribute("UId", "25");
-            partElement.SetAttribute("DisabledENO", "true");
-
-            XmlElement templateValueElement = doc.CreateElement("TemplateValue");
-            templateValueElement.SetAttribute("Name", "Card");
-            templateValueElement.SetAttribute("Type", "Cardinality");
-            templateValueElement.InnerText = "1";
-            partElement.AppendChild(templateValueElement);
-
-            partsElement.AppendChild(partElement);
-            flgNetElement.AppendChild(partsElement);
-
-            // 将 Wires 元素添加到 FlgNet 元素中
-            XmlElement wiresElement = doc.CreateElement("Wires");
-
-            // 添加 <Wire> 元素
-            XmlElement wireElement1 = doc.CreateElement("Wire");
-            wireElement1.SetAttribute("UId", "26");
-            wiresElement.AppendChild(wireElement1);
-            XmlElement powerrailElement = doc.CreateElement("Powerrail");
-            wireElement1.AppendChild(powerrailElement);
-            XmlElement nameConElement1 = doc.CreateElement("NameCon");
-            nameConElement1.SetAttribute("UId", "24");
-            nameConElement1.SetAttribute("Name", "in");
-            wireElement1.AppendChild(nameConElement1);
-            wiresElement.AppendChild(wireElement1);
-
-            // 创建 <Wire> 元素，并添加子元素和属性
-            XmlElement wire27 = doc.CreateElement("Wire");
-            wire27.SetAttribute("UId", "27");
-            wire27.AppendChild(CreateIdentCon(doc, "21"));
-            wire27.AppendChild(CreateNameCon(doc, "24", "operand"));
-            wiresElement.AppendChild(wire27);
-
-            XmlElement wire28 = doc.CreateElement("Wire");
-            wire28.SetAttribute("UId", "28");
-            wire28.AppendChild(CreateNameCon(doc, "24", "out"));
-            wire28.AppendChild(CreateNameCon(doc, "25", "en"));
-            wiresElement.AppendChild(wire28);
-
-            XmlElement wire29 = doc.CreateElement("Wire");
-            wire29.SetAttribute("UId", "29");
-            wire29.AppendChild(CreateIdentCon(doc, "22"));
-            wire29.AppendChild(CreateNameCon(doc, "25", "in"));
-            wiresElement.AppendChild(wire29);
-
-            XmlElement wire30 = doc.CreateElement("Wire");
-            wire30.SetAttribute("UId", "30");
-            wire30.AppendChild(CreateNameCon(doc, "25", "out1"));
-            wire30.AppendChild(CreateIdentCon(doc, "23"));
-            wiresElement.AppendChild(wire30);
-            flgNetElement.AppendChild(wiresElement);
-
-            // 将 FlgNet 元素添加到 NetworkSource 元素中
-            networkSourceElement.AppendChild(flgNetElement);
-
-            // 将 NetworkSource 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(networkSourceElement);
-
-            // 创建 ProgrammingLanguage 元素
-            XmlElement programmingLanguageElement = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguageElement.InnerText = programmingLanguage;
-
-            // 将 ProgrammingLanguage 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(programmingLanguageElement);
-
-            // 将 AttributeList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(attributeListElement);
-
-            // 创建 ObjectList 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-
-            // 创建 Comment MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 1, "Comment", "zh-CN", commentText);
-
-            // 创建 Title MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 3, "Title", "zh-CN", titleText);
-
-            // 将 ObjectList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(objectListElement);
-
-            // 将 SW.Blocks.CompileUnit 元素添加到父元素中
-            parentElement.AppendChild(compileUnitElement);
-        }
-
-        private void CreateCompileUnitTypeCElement(XmlDocument doc, XmlElement parentElement, int id, string programmingLanguage, string titleText, string commentText)
-        {
-            // 创建 <SW.Blocks.CompileUnit> 元素
-            XmlElement compileUnitElement = doc.CreateElement("SW.Blocks.CompileUnit");
-            compileUnitElement.SetAttribute("ID", id.ToString("X"));
-            compileUnitElement.SetAttribute("CompositionName", "CompileUnits");
-
-            // 创建 <AttributeList> 元素
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-
-            // 创建 NetworkSource 元素
-            XmlElement networkSourceElement = doc.CreateElement("NetworkSource");
-
-            // 创建 FlgNet 元素
-            XmlElement flgNetElement = doc.CreateElement("FlgNet");
-            flgNetElement.SetAttribute("xmlns", "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
-
-            // 添加 <FlgNet> 元素的子元素
-            XmlElement partsElement = doc.CreateElement("Parts");
-
-            AddSymbolElement(doc, partsElement, 21, true, $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Comm_Load_DONE");
-            AddConstantElement(doc, partsElement, 22, "USInt.1");
-            AddSymbolElement(doc, partsElement, 23, true, $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Step");
-            // 添加 <Part> 元素
-            XmlElement partAElement = doc.CreateElement("Part");
-            partAElement.SetAttribute("Name", "Contact");
-            partAElement.SetAttribute("UId", "24");
-            partsElement.AppendChild(partAElement);
-
-            // 添加 <Part> 元素
-            XmlElement partElement = doc.CreateElement("Part");
-            partElement.SetAttribute("Name", "Move");
-            partElement.SetAttribute("UId", "25");
-            partElement.SetAttribute("DisabledENO", "true");
-
-            XmlElement templateValueElement = doc.CreateElement("TemplateValue");
-            templateValueElement.SetAttribute("Name", "Card");
-            templateValueElement.SetAttribute("Type", "Cardinality");
-            templateValueElement.InnerText = "1";
-            partElement.AppendChild(templateValueElement);
-
-            partsElement.AppendChild(partElement);
-            flgNetElement.AppendChild(partsElement);
-
-            // 将 Wires 元素添加到 FlgNet 元素中
-            XmlElement wiresElement = doc.CreateElement("Wires");
-
-            // 添加 <Wire> 元素
-            XmlElement wireElement1 = doc.CreateElement("Wire");
-            wireElement1.SetAttribute("UId", "26");
-            wiresElement.AppendChild(wireElement1);
-            XmlElement powerrailElement = doc.CreateElement("Powerrail");
-            wireElement1.AppendChild(powerrailElement);
-            XmlElement nameConElement1 = doc.CreateElement("NameCon");
-            nameConElement1.SetAttribute("UId", "24");
-            nameConElement1.SetAttribute("Name", "in");
-            wireElement1.AppendChild(nameConElement1);
-            wiresElement.AppendChild(wireElement1);
-
-            // 创建 <Wire> 元素，并添加子元素和属性
-            XmlElement wire27 = doc.CreateElement("Wire");
-            wire27.SetAttribute("UId", "27");
-            wire27.AppendChild(CreateIdentCon(doc, "21"));
-            wire27.AppendChild(CreateNameCon(doc, "24", "operand"));
-            wiresElement.AppendChild(wire27);
-
-            XmlElement wire28 = doc.CreateElement("Wire");
-            wire28.SetAttribute("UId", "28");
-            wire28.AppendChild(CreateNameCon(doc, "24", "out"));
-            wire28.AppendChild(CreateNameCon(doc, "25", "en"));
-            wiresElement.AppendChild(wire28);
-
-            XmlElement wire29 = doc.CreateElement("Wire");
-            wire29.SetAttribute("UId", "29");
-            wire29.AppendChild(CreateIdentCon(doc, "22"));
-            wire29.AppendChild(CreateNameCon(doc, "25", "in"));
-            wiresElement.AppendChild(wire29);
-
-            XmlElement wire30 = doc.CreateElement("Wire");
-            wire30.SetAttribute("UId", "30");
-            wire30.AppendChild(CreateNameCon(doc, "25", "out1"));
-            wire30.AppendChild(CreateIdentCon(doc, "23"));
-            wiresElement.AppendChild(wire30);
-            flgNetElement.AppendChild(wiresElement);
-
-            // 将 FlgNet 元素添加到 NetworkSource 元素中
-            networkSourceElement.AppendChild(flgNetElement);
-
-            // 将 NetworkSource 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(networkSourceElement);
-
-            // 创建 ProgrammingLanguage 元素
-            XmlElement programmingLanguageElement = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguageElement.InnerText = programmingLanguage;
-
-            // 将 ProgrammingLanguage 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(programmingLanguageElement);
-
-            // 将 AttributeList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(attributeListElement);
-
-            // 创建 ObjectList 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-
-            // 创建 Comment MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 1, "Comment", "zh-CN", commentText);
-
-            // 创建 Title MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 3, "Title", "zh-CN", titleText);
-
-            // 将 ObjectList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(objectListElement);
-
-            // 将 SW.Blocks.CompileUnit 元素添加到父元素中
-            parentElement.AppendChild(compileUnitElement);
-        }
-
-        static void CreateCompileUnitTypeBElement(XmlDocument doc, XmlElement parentElement, int id, List<InstructionData> list, List<string> listComponentName, string programmingLanguage, string titleText, string commentText)
-        {
-            // 创建 <SW.Blocks.CompileUnit> 元素
-            XmlElement compileUnitElement = doc.CreateElement("SW.Blocks.CompileUnit");
-            compileUnitElement.SetAttribute("ID", id.ToString("X"));
-            compileUnitElement.SetAttribute("CompositionName", "CompileUnits");
-
-            // 创建 <AttributeList> 元素
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-
-            // 创建 NetworkSource 元素
-            XmlElement networkSourceElement = doc.CreateElement("NetworkSource");
-
-            // 创建 FlgNet 元素
-            XmlElement flgNetElement = doc.CreateElement("FlgNet");
-            flgNetElement.SetAttribute("xmlns", "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
-
-            // 将 Parts 元素添加到 FlgNet 元素中
-            XmlElement partsElement = doc.CreateElement("Parts");
-            int idAdd = 20;
-            int idAdd1 = 20;
-            for (int i = 0; i < list.Count; i++)
-            {
-                switch (list[i].Scope)
-                {
-                    case "GlobalVariable":
-                        AddSymbolElement(doc, partsElement, idAdd += 1, list[i].AddressType == "Constant" ? false : true, listComponentName[i]);
-                        break;
-                    case "LiteralConstant":
-                        AddConstantElement(doc, partsElement, idAdd += 1, listComponentName[i]);
-                        break;
-                    case "GlobalConstant":
-                        AddSymbolGlobalConstantElement(doc, partsElement, idAdd += 1, list[i].AddressType == "Constant" ? false : true, listComponentName[i]);
-                        break;
-                    default:
-                        //System.Windows.MessageBox.Show("Scope is not GlobalVariable or LiteralConstant.");
-                        break;
-                }
-            }
-
-            XmlElement partAElement = doc.CreateElement("Part");
-            partAElement.SetAttribute("Name", "Contact");
-            partAElement.SetAttribute("UId", $"{idAdd += 1}");
-
-            // 添加 <Part> 元素
-            XmlElement NegatedElement = doc.CreateElement("Negated");
-            NegatedElement.SetAttribute("Name", "operand");
-            partAElement.AppendChild(NegatedElement);
-
-            partsElement.AppendChild(partAElement);
-
-            // 添加 <Part> 元素
-            XmlElement partElement = doc.CreateElement("Part");
-            partElement.SetAttribute("Name", list[0].Name);
-            partElement.SetAttribute("Version", list[0].Version);
-            partElement.SetAttribute("UId", $"{idAdd += 1}");
-            int noTemp = idAdd;
-
-            XmlElement instanceElement = doc.CreateElement("Instance");
-            instanceElement.SetAttribute("Scope", "GlobalVariable");
-            instanceElement.SetAttribute("UId", $"{idAdd += 1}");
-            partElement.AppendChild(instanceElement);
-
-            XmlElement componentElement = doc.CreateElement("Component");
-            componentElement.SetAttribute("Name", "Modbus_Comm_Load_DB");
-            instanceElement.AppendChild(componentElement);
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i].TemplateValueName != null)
-                {
-                    XmlElement templateValueElement = doc.CreateElement("TemplateValue");
-                    templateValueElement.SetAttribute("Name", list[i].TemplateValueName);
-                    templateValueElement.SetAttribute("Type", list[i].TemplateValueType);
-                    templateValueElement.InnerText = list[i].TemplateValue;
-                    partElement.AppendChild(templateValueElement);
-                }
-            }
-            partsElement.AppendChild(partElement);
-            flgNetElement.AppendChild(partsElement);
-
-            // 将 Wires 元素添加到 FlgNet 元素中
-            XmlElement wiresElement = doc.CreateElement("Wires");
-
-            // 添加 <Wire> 元素
-            XmlElement wireElementD1 = doc.CreateElement("Wire");
-            wireElementD1.SetAttribute("UId", "36");
-            wiresElement.AppendChild(wireElementD1);
-            XmlElement powerrailElementD1 = doc.CreateElement("Powerrail");
-            wireElementD1.AppendChild(powerrailElementD1);
-            XmlElement nameConElementD1 = doc.CreateElement("NameCon");
-            nameConElementD1.SetAttribute("UId", "34");
-            nameConElementD1.SetAttribute("Name", "en");
-            wireElementD1.AppendChild(nameConElementD1);
-            XmlElement nameConElementD2 = doc.CreateElement("NameCon");
-            nameConElementD2.SetAttribute("UId", "33");
-            nameConElementD2.SetAttribute("Name", "in");
-            wireElementD1.AppendChild(nameConElementD2);
-            wiresElement.AppendChild(wireElementD1);
-
-            AddWireElement(doc, wiresElement, "37", "21", "33", "operand", false);
-
-            // 添加 <Wire> 元素
-            XmlElement wireElementD2 = doc.CreateElement("Wire");
-            wireElementD2.SetAttribute("UId", "38");
-            wiresElement.AppendChild(wireElementD2);
-            XmlElement nameConElementD21 = doc.CreateElement("NameCon");
-            nameConElementD21.SetAttribute("UId", "33");
-            nameConElementD21.SetAttribute("Name", "out");
-            wireElementD2.AppendChild(nameConElementD21);
-            XmlElement nameConElementD31 = doc.CreateElement("NameCon");
-            nameConElementD31.SetAttribute("UId", "34");
-            nameConElementD31.SetAttribute("Name", "REQ");
-            wireElementD2.AppendChild(nameConElementD31);
-            wiresElement.AppendChild(wireElementD2);
-
-            idAdd = 38;
-            idAdd1 = 21;
-            for (int i = 2; i < list.Count; i++)
-            {
-                XmlElement wireElement = doc.CreateElement("Wire");
-                wireElement.SetAttribute("UId", $"{idAdd += 1}");
-                XmlElement identConElement = doc.CreateElement("IdentCon"); ;
-                XmlElement powerrailElement = doc.CreateElement("Powerrail");
-                XmlElement nameConElement = doc.CreateElement("NameCon");
-                nameConElement.SetAttribute("UId", $"{noTemp}");
-                nameConElement.SetAttribute("Name", list[i].Wire);
-                if (list[i].InputOrOutput == "Input")
-                {
-                    if (i == 0)
-                    {
-                        wireElement.AppendChild(powerrailElement);
-                    }
-                    else
-                    {
-                        identConElement.SetAttribute("UId", $"{idAdd1 += 1}");
-                        wireElement.AppendChild(identConElement);
-                    }
-                    wireElement.AppendChild(nameConElement);
-                }
-                else
-                {
-                    identConElement.SetAttribute("UId", $"{idAdd1 += 1}");
-                    wireElement.AppendChild(nameConElement);
-                    wireElement.AppendChild(identConElement);
-                }
-                wiresElement.AppendChild(wireElement);
-            }
-
-            flgNetElement.AppendChild(wiresElement);
-
-            // 将 FlgNet 元素添加到 NetworkSource 元素中
-            networkSourceElement.AppendChild(flgNetElement);
-
-            // 将 NetworkSource 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(networkSourceElement);
-
-            // 创建 ProgrammingLanguage 元素
-            XmlElement programmingLanguageElement = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguageElement.InnerText = programmingLanguage;
-
-            // 将 ProgrammingLanguage 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(programmingLanguageElement);
-
-            // 将 AttributeList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(attributeListElement);
-
-            // 创建 ObjectList 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-
-            // 创建 Comment MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 1, "Comment", "zh-CN", commentText);
-
-            // 创建 Title MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 3, "Title", "zh-CN", titleText);
-
-            // 将 ObjectList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(objectListElement);
-
-            // 将 SW.Blocks.CompileUnit 元素添加到父元素中
-            parentElement.AppendChild(compileUnitElement);
-        }
-
-        private void CreateCompileUnitElementONE(XmlDocument doc, XmlElement parentElement, int id, ModbusInfo modbusInfoONE, string programmingLanguage, string titleText, string commentText)
-        {
-            // 创建 <SW.Blocks.CompileUnit> 元素
-            XmlElement compileUnitElement = doc.CreateElement("SW.Blocks.CompileUnit");
-            compileUnitElement.SetAttribute("ID", id.ToString("X"));
-            compileUnitElement.SetAttribute("CompositionName", "CompileUnits");
-
-            // 创建 <AttributeList> 元素
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-
-            // 创建 NetworkSource 元素
-            XmlElement networkSourceElement = doc.CreateElement("NetworkSource");
-
-            // 创建 FlgNet 元素
-            XmlElement flgNetElement = doc.CreateElement("FlgNet");
-            flgNetElement.SetAttribute("xmlns", "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
-
-            // 将 Parts 元素添加到 FlgNet 元素中
-            // 添加 <FlgNet> 元素的子元素
-            XmlElement partsElement = doc.CreateElement("Parts");
-
-            // 添加 <Access> 元素
-            AddSymbolElement(doc, partsElement, 21, true, $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Step");
-            //AddComponenElement(doc, partsElement8, "22", "Local~CM_1241_(RS422_485)_1");
-            AddConstantElement(doc, partsElement, 22, $"USInt.{(id - 18) / 10 + 1}");
-            AddConstantElement(doc, partsElement, 23, $"UInt.{modbusInfoONE.MB_ADDR}");
-            AddConstantElement(doc, partsElement, 24, $"USInt.{modbusInfoONE.MODE}");
-            AddConstantElement(doc, partsElement, 25, $"UDInt.{modbusInfoONE.DATA_ADDR}");
-            AddConstantElement(doc, partsElement, 26, $"UInt.{modbusInfoONE.DATA_LEN}");
-            AddSymbolElement(doc, partsElement, 27, true, $"{(modbusInfoONE.MODE == 0 ? $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Read_DATA_{modbusInfoONE.Name}{modbusInfoONE.MB_No}" : $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Write_DATA_{modbusInfoONE.Name}{modbusInfoONE.MB_No}")}");
-            AddSymbolArrayElement(doc, partsElement, 28, (id - 18) / 10 + 1, "DONE");
-            AddSymbolArrayElement(doc, partsElement, 29, (id - 18) / 10 + 1, "BUSY");
-            AddSymbolArrayElement(doc, partsElement, 30, (id - 18) / 10 + 1, "ERROR");
-            AddSymbolArrayElement(doc, partsElement, 31, (id - 18) / 10 + 1, "STATUS");
-
-            // 添加 <Part> 元素
-            XmlElement partElement2 = doc.CreateElement("Part");
-            partElement2.SetAttribute("Name", "Eq");
-            partElement2.SetAttribute("UId", "32");
-            XmlElement templateValueElement = doc.CreateElement("TemplateValue");
-            templateValueElement.SetAttribute("Name", "SrcType");
-            templateValueElement.SetAttribute("Type", "Type");
-            templateValueElement.InnerText = "USInt";
-            partElement2.AppendChild(templateValueElement);
-            partsElement.AppendChild(partElement2);
-
-            // 添加 <Part> 元素
-            XmlElement partElement8 = doc.CreateElement("Part");
-            partElement8.SetAttribute("Name", "Modbus_Master");
-            partElement8.SetAttribute("Version", "2.4");
-            partElement8.SetAttribute("UId", "33");
-
-            XmlElement instanceElement8 = doc.CreateElement("Instance");
-            instanceElement8.SetAttribute("Scope", "GlobalVariable");
-            instanceElement8.SetAttribute("UId", "34");
-            partElement8.AppendChild(instanceElement8);
-
-            XmlElement componentElement8 = doc.CreateElement("Component");
-            componentElement8.SetAttribute("Name", "Modbus_Master_DB");
-            instanceElement8.AppendChild(componentElement8);
-
-            XmlElement templateValueElement81 = doc.CreateElement("TemplateValue");
-            templateValueElement81.SetAttribute("Name", "card");
-            templateValueElement81.SetAttribute("Type", "Cardinality");
-            templateValueElement81.InnerText = "0";
-            partElement8.AppendChild(templateValueElement81);
-
-            XmlElement templateValueElement83 = doc.CreateElement("TemplateValue");
-            templateValueElement83.SetAttribute("Name", "word_type");
-            templateValueElement83.SetAttribute("Type", "Type");
-            templateValueElement83.InnerText = "UInt";
-            partElement8.AppendChild(templateValueElement83);
-
-            XmlElement templateValueElement84 = doc.CreateElement("TemplateValue");
-            templateValueElement84.SetAttribute("Name", "dword_type");
-            templateValueElement84.SetAttribute("Type", "Type");
-            templateValueElement84.InnerText = "UDInt";
-            partElement8.AppendChild(templateValueElement84);
-
-            XmlElement templateValueElement85 = doc.CreateElement("TemplateValue");
-            templateValueElement85.SetAttribute("Name", "byte_type");
-            templateValueElement85.SetAttribute("Type", "Type");
-            templateValueElement85.InnerText = "USInt";
-            partElement8.AppendChild(templateValueElement85);
-
-            XmlElement templateValueElement86 = doc.CreateElement("TemplateValue");
-            templateValueElement86.SetAttribute("Name", "any_type");
-            templateValueElement86.SetAttribute("Type", "Type");
-            templateValueElement86.InnerText = "Variant";
-            partElement8.AppendChild(templateValueElement86);
-            partsElement.AppendChild(partElement8);
-            flgNetElement.AppendChild(partsElement);
-
-            // 将 Wires 元素添加到 FlgNet 元素中
-            XmlElement wiresElementD = doc.CreateElement("Wires");
-            // 添加 <Wire> 元素
-            XmlElement wireElementD1 = doc.CreateElement("Wire");
-            wireElementD1.SetAttribute("UId", "35");
-            wiresElementD.AppendChild(wireElementD1);
-            XmlElement powerrailElementD1 = doc.CreateElement("Powerrail");
-            wireElementD1.AppendChild(powerrailElementD1);
-            XmlElement nameConElementD1 = doc.CreateElement("NameCon");
-            nameConElementD1.SetAttribute("UId", "33");
-            nameConElementD1.SetAttribute("Name", "en");
-            wireElementD1.AppendChild(nameConElementD1);
-            XmlElement nameConElementD2 = doc.CreateElement("NameCon");
-            nameConElementD2.SetAttribute("UId", "32");
-            nameConElementD2.SetAttribute("Name", "pre");
-            wireElementD1.AppendChild(nameConElementD2);
-            wiresElementD.AppendChild(wireElementD1);
-
-            AddWireElement(doc, wiresElementD, "36", "21", "32", "in1", false);
-            AddWireElement(doc, wiresElementD, "37", "22", "32", "in2", false);
-
-            XmlElement wireElementD2 = doc.CreateElement("Wire");
-            wireElementD2.SetAttribute("UId", "38");
-            wiresElementD.AppendChild(wireElementD2);
-            XmlElement nameConElementD21 = doc.CreateElement("NameCon");
-            nameConElementD21.SetAttribute("UId", "32");
-            nameConElementD21.SetAttribute("Name", "out");
-            wireElementD2.AppendChild(nameConElementD21);
-            XmlElement nameConElementD3 = doc.CreateElement("NameCon");
-            nameConElementD3.SetAttribute("UId", "33");
-            nameConElementD3.SetAttribute("Name", "REQ");
-            wireElementD2.AppendChild(nameConElementD3);
-            wiresElementD.AppendChild(wireElementD2);
-
-            AddWireElement(doc, wiresElementD, "39", "23", "33", "MB_ADDR", false);
-            AddWireElement(doc, wiresElementD, "40", "24", "33", "MODE", false);
-            AddWireElement(doc, wiresElementD, "41", "25", "33", "DATA_ADDR", false);
-            AddWireElement(doc, wiresElementD, "42", "26", "33", "DATA_LEN", false);
-            AddWireElement(doc, wiresElementD, "43", "27", "33", "DATA_PTR", false);
-            AddWireElement(doc, wiresElementD, "44", "28", "33", "DONE", true);
-            AddWireElement(doc, wiresElementD, "45", "29", "33", "BUSY", true);
-            AddWireElement(doc, wiresElementD, "46", "30", "33", "ERROR", true);
-            AddWireElement(doc, wiresElementD, "47", "31", "33", "STATUS", true);
-
-            flgNetElement.AppendChild(wiresElementD);
-
-            // 将 FlgNet 元素添加到 NetworkSource 元素中
-            networkSourceElement.AppendChild(flgNetElement);
-
-            // 将 NetworkSource 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(networkSourceElement);
-
-            // 创建 ProgrammingLanguage 元素
-            XmlElement programmingLanguageElement = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguageElement.InnerText = programmingLanguage;
-
-            // 将 ProgrammingLanguage 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(programmingLanguageElement);
-
-            // 将 AttributeList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(attributeListElement);
-
-            // 创建 ObjectList 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-
-            // 创建 Comment MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 1, "Comment", "zh-CN", commentText);
-
-            // 创建 Title MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 3, "Title", "zh-CN", titleText);
-
-            // 将 ObjectList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(objectListElement);
-
-            // 将 SW.Blocks.CompileUnit 元素添加到父元素中
-            parentElement.AppendChild(compileUnitElement);
-        }
-        private void CreateCompileUnitElementOTWO(XmlDocument doc, XmlElement parentElement, int id, bool end, string programmingLanguage, string titleText, string commentText)
-        {
-            // 创建 <SW.Blocks.CompileUnit> 元素
-            XmlElement compileUnitElement = doc.CreateElement("SW.Blocks.CompileUnit");
-            compileUnitElement.SetAttribute("ID", id.ToString("X"));
-            compileUnitElement.SetAttribute("CompositionName", "CompileUnits");
-
-            // 创建 <AttributeList> 元素
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-
-            // 创建 NetworkSource 元素
-            XmlElement networkSourceElement = doc.CreateElement("NetworkSource");
-
-            // 创建 FlgNet 元素
-            XmlElement flgNetElement = doc.CreateElement("FlgNet");
-            flgNetElement.SetAttribute("xmlns", "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4");
-
-            // 将 Parts 元素添加到 FlgNet 元素中
-            // 添加 <FlgNet> 元素的子元素
-            XmlElement partsElement = doc.CreateElement("Parts");
-
-            // 添加 <Access> 元素
-            AddSymbolElement(doc, partsElement, 21, true, $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Step");
-            AddConstantElement(doc, partsElement, 22, $"USInt.{(id - 18) / 10 + 1}");
-            AddSymbolArrayElement(doc, partsElement, 23, (id - 18) / 10 + 1, "DONE");
-            AddSymbolArrayElement(doc, partsElement, 24, (id - 18) / 10 + 1, "ERROR");
-            if (end)
-            {
-                AddConstantElement(doc, partsElement, 25, $"USInt.1");
-            }
-            else
-            {
-                AddConstantElement(doc, partsElement, 25, $"USInt.{(id - 18) / 10 + 2}");
-            }
-            AddSymbolElement(doc, partsElement, 26, true, $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Step");
-
-            // 添加 <Part> 元素
-            XmlElement partElement2 = doc.CreateElement("Part");
-            partElement2.SetAttribute("Name", "Eq");
-            partElement2.SetAttribute("UId", "27");
-            XmlElement templateValueElement = doc.CreateElement("TemplateValue");
-            templateValueElement.SetAttribute("Name", "SrcType");
-            templateValueElement.SetAttribute("Type", "Type");
-            templateValueElement.InnerText = "USInt";
-            partElement2.AppendChild(templateValueElement);
-            partsElement.AppendChild(partElement2);
-
-            // 添加 <Part> 元素
-            XmlElement partElement8 = doc.CreateElement("Part");
-            partElement8.SetAttribute("Name", "Contact");
-            partElement8.SetAttribute("UId", "28");
-            partsElement.AppendChild(partElement8);
-
-            XmlElement partElement9 = doc.CreateElement("Part");
-            partElement9.SetAttribute("Name", "Contact");
-            partElement9.SetAttribute("UId", "29");
-            partsElement.AppendChild(partElement9);
-
-            // 添加 <Part> 元素
-            XmlElement partElement30 = doc.CreateElement("Part");
-            partElement30.SetAttribute("Name", "O");
-            partElement30.SetAttribute("UId", "30");
-            XmlElement templateValueElement30 = doc.CreateElement("TemplateValue");
-            templateValueElement30.SetAttribute("Name", "Card");
-            templateValueElement30.SetAttribute("Type", "Cardinality");
-            templateValueElement30.InnerText = "2";
-            partElement30.AppendChild(templateValueElement30);
-            partsElement.AppendChild(partElement30);
-
-            // 添加 <Part> 元素
-            XmlElement partElement31 = doc.CreateElement("Part");
-            partElement31.SetAttribute("Name", "Move");
-            partElement31.SetAttribute("UId", "31");
-            partElement31.SetAttribute("DisabledENO", "true");
-            XmlElement templateValueElement31 = doc.CreateElement("TemplateValue");
-            templateValueElement31.SetAttribute("Name", "Card");
-            templateValueElement31.SetAttribute("Type", "Cardinality");
-            templateValueElement31.InnerText = "1";
-            partElement31.AppendChild(templateValueElement31);
-            partsElement.AppendChild(partElement31);
-
-            flgNetElement.AppendChild(partsElement);
-
-            // 将 Wires 元素添加到 FlgNet 元素中
-            XmlElement wiresElementD = doc.CreateElement("Wires");
-            // 添加 <Wire> 元素
-            XmlElement wireElementD1 = doc.CreateElement("Wire");
-            wireElementD1.SetAttribute("UId", "32");
-            wiresElementD.AppendChild(wireElementD1);
-            XmlElement powerrailElementD1 = doc.CreateElement("Powerrail");
-            wireElementD1.AppendChild(powerrailElementD1);
-            XmlElement nameConElementD1 = doc.CreateElement("NameCon");
-            nameConElementD1.SetAttribute("UId", "27");
-            nameConElementD1.SetAttribute("Name", "pre");
-            wireElementD1.AppendChild(nameConElementD1);
-            wiresElementD.AppendChild(wireElementD1);
-
-            AddWireElement(doc, wiresElementD, "33", "21", "27", "in1", false);
-            AddWireElement(doc, wiresElementD, "34", "22", "27", "in2", false);
-
-            XmlElement wireElementD2 = doc.CreateElement("Wire");
-            wireElementD2.SetAttribute("UId", "35");
-            wiresElementD.AppendChild(wireElementD2);
-            XmlElement nameConElementD21 = doc.CreateElement("NameCon");
-            nameConElementD21.SetAttribute("UId", "27");
-            nameConElementD21.SetAttribute("Name", "out");
-            wireElementD2.AppendChild(nameConElementD21);
-            XmlElement nameConElementD3 = doc.CreateElement("NameCon");
-            nameConElementD3.SetAttribute("UId", "28");
-            nameConElementD3.SetAttribute("Name", "in");
-            wireElementD2.AppendChild(nameConElementD3);
-            XmlElement nameConElementD4 = doc.CreateElement("NameCon");
-            nameConElementD4.SetAttribute("UId", "29");
-            nameConElementD4.SetAttribute("Name", "in");
-            wireElementD2.AppendChild(nameConElementD4);
-            wiresElementD.AppendChild(wireElementD2);
-
-            AddWireElement(doc, wiresElementD, "36", "23", "28", "operand", false);
-
-            XmlElement wireElementD5 = doc.CreateElement("Wire");
-            wireElementD5.SetAttribute("UId", "37");
-            wiresElementD.AppendChild(wireElementD5);
-            XmlElement nameConElementD5 = doc.CreateElement("NameCon");
-            nameConElementD5.SetAttribute("UId", "28");
-            nameConElementD5.SetAttribute("Name", "out");
-            wireElementD5.AppendChild(nameConElementD5);
-            XmlElement nameConElementD6 = doc.CreateElement("NameCon");
-            nameConElementD6.SetAttribute("UId", "30");
-            nameConElementD6.SetAttribute("Name", "in1");
-            wireElementD5.AppendChild(nameConElementD6);
-            wiresElementD.AppendChild(wireElementD5);
-
-            AddWireElement(doc, wiresElementD, "38", "24", "29", "operand", false);
-
-            XmlElement wireElementD6 = doc.CreateElement("Wire");
-            wireElementD6.SetAttribute("UId", "39");
-            wiresElementD.AppendChild(wireElementD6);
-            XmlElement nameConElementD7 = doc.CreateElement("NameCon");
-            nameConElementD7.SetAttribute("UId", "29");
-            nameConElementD7.SetAttribute("Name", "out");
-            wireElementD6.AppendChild(nameConElementD7);
-            XmlElement nameConElementD8 = doc.CreateElement("NameCon");
-            nameConElementD8.SetAttribute("UId", "30");
-            nameConElementD8.SetAttribute("Name", "in2");
-            wireElementD6.AppendChild(nameConElementD8);
-            wiresElementD.AppendChild(wireElementD6);
-
-            XmlElement wireElementD7 = doc.CreateElement("Wire");
-            wireElementD7.SetAttribute("UId", "40");
-            wiresElementD.AppendChild(wireElementD7);
-            XmlElement nameConElementD9 = doc.CreateElement("NameCon");
-            nameConElementD9.SetAttribute("UId", "30");
-            nameConElementD9.SetAttribute("Name", "out");
-            wireElementD7.AppendChild(nameConElementD9);
-            XmlElement nameConElementD10 = doc.CreateElement("NameCon");
-            nameConElementD10.SetAttribute("UId", "31");
-            nameConElementD10.SetAttribute("Name", "en");
-            wireElementD7.AppendChild(nameConElementD10);
-            wiresElementD.AppendChild(wireElementD7);
-
-
-            AddWireElement(doc, wiresElementD, "41", "25", "31", "in", false);
-            AddWireElement(doc, wiresElementD, "42", "26", "31", "out1", true);
-
-
-            flgNetElement.AppendChild(wiresElementD);
-
-            // 将 FlgNet 元素添加到 NetworkSource 元素中
-            networkSourceElement.AppendChild(flgNetElement);
-
-            // 将 NetworkSource 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(networkSourceElement);
-
-            // 创建 ProgrammingLanguage 元素
-            XmlElement programmingLanguageElement = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguageElement.InnerText = programmingLanguage;
-
-            // 将 ProgrammingLanguage 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(programmingLanguageElement);
-
-            // 将 AttributeList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(attributeListElement);
-
-            // 创建 ObjectList 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-            // 创建 Comment MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 1, "Comment", "zh-CN", commentText);
-
-            // 创建 Title MultilingualText
-            CreateMultilingualTextElement(doc, objectListElement, id + 3, "Title", "zh-CN", titleText);
-
-            // 将 ObjectList 元素添加到 SW.Blocks.CompileUnit 元素中
-            compileUnitElement.AppendChild(objectListElement);
-
-            // 将 SW.Blocks.CompileUnit 元素添加到父元素中
-            parentElement.AppendChild(compileUnitElement);
-        }
-
-        static void CreateMultilingualTextElement(XmlDocument doc, XmlElement parentElement, int id, string compositionName, string culture, string text)
-        {
-            // 创建 MultilingualText 元素
-            XmlElement multilingualTextElement = doc.CreateElement("MultilingualText");
-            multilingualTextElement.SetAttribute("ID", id.ToString("X"));
-            multilingualTextElement.SetAttribute("CompositionName", compositionName);
-
-            // 创建 ObjectList 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-
-            // 创建 MultilingualTextItem 元素
-            XmlElement multilingualTextItemElement = doc.CreateElement("MultilingualTextItem");
-            multilingualTextItemElement.SetAttribute("ID", (id + 1).ToString("X"));
-            multilingualTextItemElement.SetAttribute("CompositionName", "Items");
-
-            // 创建 AttributeList 元素
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-
-            // 创建 Culture 元素
-            XmlElement cultureElement = doc.CreateElement("Culture");
-            cultureElement.InnerText = culture;
-
-            // 创建 Text 元素
-            XmlElement textElement = doc.CreateElement("Text");
-            textElement.InnerText = text;
-
-            // 将 Culture 和 Text 元素添加到 AttributeList 元素中
-            attributeListElement.AppendChild(cultureElement);
-            attributeListElement.AppendChild(textElement);
-
-            // 将 AttributeList 元素添加到 MultilingualTextItem 元素中
-            multilingualTextItemElement.AppendChild(attributeListElement);
-
-            // 将 MultilingualTextItem 元素添加到 ObjectList 元素中
-            objectListElement.AppendChild(multilingualTextItemElement);
-
-            // 将 ObjectList 元素添加到 MultilingualText 元素中
-            multilingualTextElement.AppendChild(objectListElement);
-
-            // 将 MultilingualText 元素添加到父元素中
-            parentElement.AppendChild(multilingualTextElement);
-        }
-
-        static XmlElement CreateIdentCon(XmlDocument doc, string uId)
-        {
-            XmlElement identCon = doc.CreateElement("IdentCon");
-            identCon.SetAttribute("UId", uId);
-            return identCon;
-        }
-
-        // 创建 <NameCon> 元素
-        static XmlElement CreateNameCon(XmlDocument doc, string uId, string name)
-        {
-            XmlElement nameCon = doc.CreateElement("NameCon");
-            nameCon.SetAttribute("UId", uId);
-            nameCon.SetAttribute("Name", name);
-            return nameCon;
-        }
-
-
-
-        public List<InstructionData> list;
-        List<string> modbusCommLoad = new List<string>();
-
-
-
+        string ModbusParity;
         private async void ImportPrograms()
         {
-            modbusCommLoad.Clear();
-            modbusCommLoad.Add("0");
-            modbusCommLoad.Add($"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Comm_Load_DONE");
-            modbusCommLoad.Add($"Local~{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}");
-            modbusCommLoad.Add($"UDInt.{StartTIAPortalModel.ModbusBaud}");
-            switch (StartTIAPortalModel.ModbusParity)
-            {
-                case "None":
-                    modbusCommLoad.Add($"UInt.0");
-                    break;
-                case "Odd":
-                    modbusCommLoad.Add($"UInt.1");
-                    break;
-                case "Even":
-                    modbusCommLoad.Add($"UInt.2");
-                    break;
-            }
-            modbusCommLoad.Add("UInt.0");
-            modbusCommLoad.Add("UInt.0");
-            modbusCommLoad.Add("UInt.0");
-            modbusCommLoad.Add("UInt.1000");
-            modbusCommLoad.Add("Modbus_Master_DB.MB_DB");
-            modbusCommLoad.Add($"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Comm_Load_DONE");
-            modbusCommLoad.Add($"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Comm_Load_ERROR");
-            modbusCommLoad.Add($"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB.Comm_Load_STATUS");
 
-            QueryInstructionData("Modbus_Comm_Load", "3.0");
-            // 创建XmlDocument对象
-            XmlDocument doc = new XmlDocument();
-
-            // 创建xml声明节点
-            XmlDeclaration xmlDeclaration = doc.CreateXmlDeclaration("1.0", "utf-8", null);
-            doc.AppendChild(xmlDeclaration);
-
-            // 创建根节点<Document>
-            XmlElement documentElement = doc.CreateElement("Document");
-            doc.AppendChild(documentElement);
-
-            // 创建子节点<Engineering>
-            XmlElement engineeringElement = doc.CreateElement("Engineering");
-            engineeringElement.SetAttribute("version", $"V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
-            documentElement.AppendChild(engineeringElement);
-
-            // 创建子节点<SW.Blocks.OB>
-            XmlElement swBlocksObElement = doc.CreateElement("SW.Blocks.OB");
-            swBlocksObElement.SetAttribute("ID", "0");
-            documentElement.AppendChild(swBlocksObElement);
-
-            // 创建子节点<AttributeList>
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-            swBlocksObElement.AppendChild(attributeListElement);
-            // 创建子节点<AutoNumber>
-            XmlElement autoNumberElement = doc.CreateElement("AutoNumber");
-            autoNumberElement.InnerText = "true";
-            attributeListElement.AppendChild(autoNumberElement);
-
-            // 创建子节点<HeaderAuthor>
-            XmlElement headerAuthorElement = doc.CreateElement("HeaderAuthor");
-            attributeListElement.AppendChild(headerAuthorElement);
-
-            // 创建子节点<HeaderFamily>
-            XmlElement headerFamilyElement = doc.CreateElement("HeaderFamily");
-            attributeListElement.AppendChild(headerFamilyElement);
-
-            // 创建子节点<HeaderName>
-            XmlElement headerNameElement = doc.CreateElement("HeaderName");
-            attributeListElement.AppendChild(headerNameElement);
-
-            // 创建子节点<HeaderVersion>
-            XmlElement headerVersionElement = doc.CreateElement("HeaderVersion");
-            headerVersionElement.InnerText = "0.1";
-            attributeListElement.AppendChild(headerVersionElement);
-
-            // 创建子节点<Interface>
-            XmlElement interfaceElement = doc.CreateElement("Interface");
-            attributeListElement.AppendChild(interfaceElement);
-
-            // 创建子节点<Sections>
-            XmlElement sectionsElement = doc.CreateElement("Sections", "http://www.siemens.com/automation/Openness/SW/Interface/v5");
-            interfaceElement.AppendChild(sectionsElement);
-
-            // 创建子节点<Section>，设置属性Name="Input"
-            XmlElement inputSectionElement = doc.CreateElement("Section");
-            inputSectionElement.SetAttribute("Name", "Input");
-            sectionsElement.AppendChild(inputSectionElement);
-
-            // 创建子节点<Member>，设置属性Name="Initial_Call"、Datatype="Bool"、Accessibility="Public"、Informative="true"
-            XmlElement initialCallMemberElement = doc.CreateElement("Member");
-            initialCallMemberElement.SetAttribute("Name", "Initial_Call");
-            initialCallMemberElement.SetAttribute("Datatype", "Bool");
-            initialCallMemberElement.SetAttribute("Accessibility", "Public");
-            initialCallMemberElement.SetAttribute("Informative", "true");
-            inputSectionElement.AppendChild(initialCallMemberElement);
-
-            // 在<Member>下创建<Comment>
-            XmlElement initialCallCommentElement = doc.CreateElement("Comment");
-            initialCallMemberElement.AppendChild(initialCallCommentElement);
-
-            // 在<Comment>下创建<MultiLanguageText>，设置属性Lang="en-US"，并设置文本内容
-            XmlElement initialCallMultiLanguageTextElement = doc.CreateElement("MultiLanguageText");
-            initialCallMultiLanguageTextElement.SetAttribute("Lang", "en-US");
-            initialCallMultiLanguageTextElement.InnerText = "Initial call of this OB";
-            initialCallCommentElement.AppendChild(initialCallMultiLanguageTextElement);
-
-            // 创建子节点<Member>，设置属性Name="Remanence"、Datatype="Bool"、Accessibility="Public"、Informative="true"
-            XmlElement remanenceMemberElement = doc.CreateElement("Member");
-            remanenceMemberElement.SetAttribute("Name", "Remanence");
-            remanenceMemberElement.SetAttribute("Datatype", "Bool");
-            remanenceMemberElement.SetAttribute("Accessibility", "Public");
-            remanenceMemberElement.SetAttribute("Informative", "true");
-            inputSectionElement.AppendChild(remanenceMemberElement);
-
-            // 在<Member>下创建<Comment>
-            XmlElement remanenceCommentElement = doc.CreateElement("Comment");
-            remanenceMemberElement.AppendChild(remanenceCommentElement);
-
-            // 在<Comment>下创建<MultiLanguageText>，设置属性Lang="en-US"，并设置文本内容
-            XmlElement remanenceMultiLanguageTextElement = doc.CreateElement("MultiLanguageText");
-            remanenceMultiLanguageTextElement.SetAttribute("Lang", "en-US");
-            remanenceMultiLanguageTextElement.InnerText = "=True, if remanent data are available";
-            remanenceCommentElement.AppendChild(remanenceMultiLanguageTextElement);
-
-            // 创建子节点<Section>，设置属性Name="Temp"
-            XmlElement inputTempSectionElement = doc.CreateElement("Section");
-            inputTempSectionElement.SetAttribute("Name", "Temp");
-            sectionsElement.AppendChild(inputTempSectionElement);
-
-            // 创建子节点<Section>，设置属性Name="Temp"
-            XmlElement inputConstantSectionElement = doc.CreateElement("Section");
-            inputConstantSectionElement.SetAttribute("Name", "Constant");
-            sectionsElement.AppendChild(inputConstantSectionElement);
-
-            // 创建子节点<IsIECCheckEnabled>，并设置其值为"false"
-            XmlElement isIECCheckEnabledElement = doc.CreateElement("IsIECCheckEnabled");
-            isIECCheckEnabledElement.InnerText = "false";
-            attributeListElement.AppendChild(isIECCheckEnabledElement);
-
-            // 创建子节点<MemoryLayout>，并设置其值为"Optimized"
-            XmlElement memoryLayoutElement = doc.CreateElement("MemoryLayout");
-            memoryLayoutElement.InnerText = "Optimized";
-            attributeListElement.AppendChild(memoryLayoutElement);
-
-            // 创建子节点<Name>，并设置其值为"ModbusProject"
-            XmlElement nameElement = doc.CreateElement("Name");
-            nameElement.InnerText = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}ModbusMaster";
-            attributeListElement.AppendChild(nameElement);
-
-            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)>=18)
-            {
-                //创建子节点 < Namespace >，并设置其值为空字符串
-                XmlElement namespaceElement = doc.CreateElement("Namespace");
-                attributeListElement.AppendChild(namespaceElement);
-            }
-
-
-            // 创建子节点<Number>，并设置其值为"1"
-            XmlElement numberElement = doc.CreateElement("Number");
-            numberElement.InnerText = "1";
-            attributeListElement.AppendChild(numberElement);
-
-            // 创建子节点<ProgrammingLanguage>，并设置其值为"LAD"
-            XmlElement programmingLanguageElement = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguageElement.InnerText = "LAD";
-            attributeListElement.AppendChild(programmingLanguageElement);
-
-            // 创建子节点<SecondaryType>，并设置其值为"ProgramCycle"
-            XmlElement secondaryTypeElement = doc.CreateElement("SecondaryType");
-            secondaryTypeElement.InnerText = "ProgramCycle";
-            attributeListElement.AppendChild(secondaryTypeElement);
-
-            // 创建子节点<SetENOAutomatically>，并设置其值为"false"
-            XmlElement setENOAutomaticallyElement = doc.CreateElement("SetENOAutomatically");
-            setENOAutomaticallyElement.InnerText = "false";
-            attributeListElement.AppendChild(setENOAutomaticallyElement);
-
-
-
-
-
-            // 创建 <ObjectList> 元素
-            XmlElement objectListElement = doc.CreateElement("ObjectList");
-            swBlocksObElement.AppendChild(objectListElement);
-
-            // 创建第一个 <MultilingualText> 元素
-            XmlElement multilingualTextElement1 = doc.CreateElement("MultilingualText");
-            multilingualTextElement1.SetAttribute("ID", "1");
-            multilingualTextElement1.SetAttribute("CompositionName", "Comment");
-
-            // 在第一个 <MultilingualText> 元素下创建 <ObjectList> 元素
-            XmlElement objectListElement1 = doc.CreateElement("ObjectList");
-
-            // 创建 <MultilingualTextItem> 元素
-            XmlElement multilingualTextItemElement1 = doc.CreateElement("MultilingualTextItem");
-            multilingualTextItemElement1.SetAttribute("ID", "2");
-            multilingualTextItemElement1.SetAttribute("CompositionName", "Items");
-
-            // 在第一个 <MultilingualTextItem> 元素下创建 <AttributeList> 元素
-            XmlElement attributeListElement1 = doc.CreateElement("AttributeList");
-
-            // 创建 <Culture> 元素并设置文本内容为 "zh-CN"
-            XmlElement cultureElement1 = doc.CreateElement("Culture");
-            cultureElement1.InnerText = "zh-CN";
-
-            // 创建 <Text> 元素并设置文本内容为具体内容
-            XmlElement textElement1 = doc.CreateElement("Text");
-            textElement1.InnerText = @"1.免责声明 
-1.软件使用
-
-本软件是为了提供便利和效率而设计的。开发者已尽力确保软件的功能性和稳定性，但无法保证软件在所有情况下都能无误运行。用户应自行承担使用软件的风险。
-
-2.免责声明
-
-开发者不对因使用或无法使用本软件而产生的任何直接、间接、偶然、特殊或惩罚性的损害承担责任，包括但不限于数据损失、设备损坏、业务中断、利润损失等。
-
-3.软件限制
-
-本软件可能存在已知或未知的缺陷和漏洞。开发者保留对软件进行修改、更新或停止支持的权利，且不保证提供任何形式的技术支持或更新服务。"; 
-
-            // 将 <Culture> 元素和 <Text> 元素添加到 <AttributeList> 元素下
-            attributeListElement1.AppendChild(cultureElement1);
-            attributeListElement1.AppendChild(textElement1);
-
-            // 将 <AttributeList> 元素添加到 <MultilingualTextItem> 元素下
-            multilingualTextItemElement1.AppendChild(attributeListElement1);
-
-            // 将 <MultilingualTextItem> 元素添加到 <ObjectList> 元素下
-            objectListElement1.AppendChild(multilingualTextItemElement1);
-
-            // 将 <ObjectList> 元素添加到第一个 <MultilingualText> 元素下
-            multilingualTextElement1.AppendChild(objectListElement1);
-
-            objectListElement.AppendChild(multilingualTextElement1);
-            CreateCompileUnitTypeAElement(doc, objectListElement, 3, "LAD", "在S7-1200启动的第一个扫描周期，将数值4传送到在“Modbus_Comm_Load.DB”MODE，将工作模式设置为半双工 RS485两线模式", "设置通信端口模式=4 Modbus通信");
-            CreateCompileUnitTypeBElement(doc, objectListElement, 8, list, modbusCommLoad, "LAD", "在S7-1200启动的第一个扫描周期，将Modbus RTU通信的RS485端口参数初始化为波特率：9600，无校验，无流控，响应超时1000ms（Modbus RTU默认为数据位：8位，停止位：1位） MB_DB指向\"Modbus_Master\"指令所使用的背景数据块引用", "Modbus主站初始化");
-            CreateCompileUnitTypeCElement(doc, objectListElement, 13, "LAD", "初始化完成位使能MOVE指令，对步地址\"ModbusMasterOpenness.Step\"赋值1", "转到第一步");
             bool import = true;
             if (StartTIAPortalModel.ModbusInfo.Count <= 0)
             {
@@ -1631,6 +767,33 @@ namespace TIA程序生成.ViewModels
                 var dialogResult = await dialogHostService.Question("温馨提示", $"请插入Modbus参数。");
                 return;
             }
+            string Namespace = float.Parse(SelectedOpennessVersion) >= 18.0 ? "<Namespace/>" : "";
+            string Document = $"<Document>\r\n<Engineering version=\"V{(int)Math.Floor(Double.Parse((SelectedOpennessVersion)))}\"/>" + originalXml4 + Namespace + originalXml5;
+            string DocumentDB = $"<Document>\r\n<Engineering version=\"V{(int)Math.Floor(Double.Parse((SelectedOpennessVersion)))}\"/>" + originalXml6 + $"<Member Name=\"Modbus_Master\" Datatype=\"Array[1..{StartTIAPortalModel.ModbusInfo.Count}] of Struct\" Remanence=\"NonRetain\" Accessibility=\"Public\">" + originalXml7;
+            string selectedPort = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB";
+            int ID = 18;
+
+            switch (StartTIAPortalModel.ModbusParity)
+            {
+                case "None":
+                    ModbusParity = "0";
+                    break;
+                case "Odd":
+                    ModbusParity = "1";
+                    break;
+                case "Even":
+                    ModbusParity = "2";
+                    break;
+            }
+            string[] ComponentValues2 = { selectedPort, "Comm_Load_DONE", "Modbus_Master_DB", "MB_DB", selectedPort, "Comm_Load_DONE", selectedPort, "Comm_Load_ERROR", selectedPort, "Comm_Load_STATUS", selectedPort, "Modbus_Master", "STATUS", "Modbus_Comm_Load_DB" };
+            string[] ConstantValue2 = { $"{StartTIAPortalModel.ModbusBaud}", $"{ModbusParity}", $"0", $"0", $"0", $"1000" };
+            string[] TextIndex2 = { $"Modbus主站初始化", $"在S7-1200启动的第一个扫描周期，将Modbus RTU通信的RS485端口参数初始化为波特率：{StartTIAPortalModel.ModbusBaud}，校验:{StartTIAPortalModel.ModbusParity}，无流控，响应超时1000ms（Modbus RTU默认为数据位：8位，停止位：1位） MB_DB指向\"Modbus_Master\"指令所使用的背景数据块引用" };
+            string[] ComponentValues3 = { selectedPort, "Comm_Load_DONE", selectedPort, "Step" };
+            string[] ConstantValue3 = { "1" };
+            string[] TextIndex3 = { $"转到第1步", $"初始化完成位使能MOVE指令，对步地址\"ModbusMasterOpenness.Step\"赋值1" };
+            Document = Document + ImportProgramsxml(originalXml2, 8, ConstantValue2, ComponentValues2, TextIndex2, $"Local~{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}");
+            Document = Document + ImportProgramsxml(originalXml3, 13, ConstantValue3, ComponentValues3, TextIndex3, "");
+            
             for (int i = 0; i < StartTIAPortalModel.ModbusInfo.Count; i++)
             {
                 if (StartTIAPortalModel.ModbusInfo[i].DataType == null)
@@ -1654,11 +817,19 @@ namespace TIA程序生成.ViewModels
                     var dialogResult = dialogHostService.Question("温馨提示", $"序号为'{StartTIAPortalModel.ModbusInfo[i].MB_No}'的条目数据地址不能为0。");
                     return;
                 }
-                CreateCompileUnitElementONE(doc, objectListElement, 18 + i * 10, StartTIAPortalModel.ModbusInfo[i], "LAD", $"第一步：\"ModbusMasterOpenness.Step\"值={i + 1}时触发“Modbus_Master”指令读取 Modbus RTU 从站地址{StartTIAPortalModel.ModbusInfo[i].MB_ADDR}保持寄存器{StartTIAPortalModel.ModbusInfo[i].DATA_ADDR}地址开始的{StartTIAPortalModel.ModbusInfo[i].DATA_LEN}个字长的数据，将其存放于“\"ModbusMasterOpenness\".{StartTIAPortalModel.ModbusInfo[i].Name}{StartTIAPortalModel.ModbusInfo[i].MB_No}”指定的地址中", "Modbus主站读取保持寄存器数据");
-
-                CreateCompileUnitElementOTWO(doc, objectListElement, 23 + i * 10, i == StartTIAPortalModel.ModbusInfo.Count - 1 ? true : false, "LAD", $"第{i + 1}步完成位或错误位作为条件转到第{i + 2}步，使能MOVE指令，对步地址\"ModbusMasterOpenness.Step\"赋值{i + 2}", $"转到第{i + 2}步");
-
+                string[] ComponentValues = { selectedPort, "Step", selectedPort, $"Read_DATA_{StartTIAPortalModel.ModbusInfo[i].Name}{StartTIAPortalModel.ModbusInfo[i].MB_No}", selectedPort, "Modbus_Master", "DONE", selectedPort, "Modbus_Master", "BUSY", selectedPort, "Modbus_Master", "ERROR", selectedPort, "Modbus_Master", "STATUS", "Modbus_Master_DB", selectedPort, "Step", selectedPort, "Modbus_Master", "DONE", selectedPort, "Modbus_Master", "ERROR", selectedPort, "Step" };
+                string[] ConstantValue = { $"{i + 1}", $"{StartTIAPortalModel.ModbusInfo[i].MB_ADDR}", $"{StartTIAPortalModel.ModbusInfo[i].MODE}", $"{StartTIAPortalModel.ModbusInfo[i].DATA_ADDR}", $"{StartTIAPortalModel.ModbusInfo[i].DATA_LEN}", $"{i + 1}", $"{i + 1}", $"{i + 1}", $"{i + 1}" };
+                string[] TextIndex = { "Modbus主站读取保持寄存器数据", $"第{i + 1}步：\"ModbusMasterOpenness.Step\"值={i + 1}时触发“Modbus_Master”指令读取 Modbus RTU 从站地址{StartTIAPortalModel.ModbusInfo[i].MB_ADDR}保持寄存器{StartTIAPortalModel.ModbusInfo[i].DATA_ADDR}地址开始的{StartTIAPortalModel.ModbusInfo[i].DATA_LEN}个字长的数据，将其存放于“\"ModbusMasterOpenness\".{StartTIAPortalModel.ModbusInfo[i].Name}”指定的地址中" };
+                string[] ComponentValues1 = { selectedPort, "Step", selectedPort, "Modbus_Master", "DONE", selectedPort, "Modbus_Master", "ERROR", selectedPort, "Step" };
+                string[] ConstantValue1 = { $"{i + 1}", $"{i + 1}", $"{i + 1}", $"{i + 2}" };
+                string[] TextIndex1 = { $"转到第{i + 2}步", $"第{i + 1}步完成位或错误位作为条件转到第{i + 2}步，使能MOVE指令，对步地址\"ModbusMasterOpenness.Step\"赋值{i + 2}" };
+                Document = Document + ImportProgramsxml(originalXml, ID + (i * 10), ConstantValue, ComponentValues, TextIndex, "");
+                Document = Document + ImportProgramsxml(originalXml1, ID + (i * 10) + 5, ConstantValue1, ComponentValues1, TextIndex1, "");
+                DocumentDB = DocumentDB + $"<Member Name=\"Read_DATA_{StartTIAPortalModel.ModbusInfo[i].Name}{i+1}\" Datatype=\"Array[1..{StartTIAPortalModel.ModbusInfo[i].DATA_LEN}] of {StartTIAPortalModel.ModbusInfo[i].DataType}\" Remanence=\"NonRetain\" Accessibility=\"Public\">\r\n<AttributeList>\r\n<BooleanAttribute Name=\"ExternalAccessible\" SystemDefined=\"true\">true</BooleanAttribute>\r\n<BooleanAttribute Name=\"ExternalVisible\" SystemDefined=\"true\">true</BooleanAttribute>\r\n<BooleanAttribute Name=\"ExternalWritable\" SystemDefined=\"true\">true</BooleanAttribute>\r\n<BooleanAttribute Name=\"SetPoint\" SystemDefined=\"true\">false</BooleanAttribute>\r\n</AttributeList>\r\n</Member>";
             }
+            DocumentDB = DocumentDB + $"</Section>\r\n</Sections>\r\n</Interface>\r\n<IsOnlyStoredInLoadMemory>false</IsOnlyStoredInLoadMemory>\r\n<IsWriteProtectedInAS>false</IsWriteProtectedInAS>\r\n<MemoryLayout>Standard</MemoryLayout>\r\n<Name>{selectedPort}</Name>\r\n<Namespace/>\r\n<Number>3</Number>\r\n<ProgrammingLanguage>DB</ProgrammingLanguage>\r\n</AttributeList>\r\n<ObjectList>\r\n<MultilingualText ID=\"1\" CompositionName=\"Comment\">\r\n<ObjectList>\r\n<MultilingualTextItem ID=\"2\" CompositionName=\"Items\">\r\n<AttributeList>\r\n<Culture>zh-CN</Culture>\r\n<Text/>\r\n</AttributeList>\r\n</MultilingualTextItem>\r\n</ObjectList>\r\n</MultilingualText>\r\n<MultilingualText ID=\"3\" CompositionName=\"Title\">\r\n<ObjectList>\r\n<MultilingualTextItem ID=\"4\" CompositionName=\"Items\">\r\n<AttributeList>\r\n<Culture>zh-CN</Culture>\r\n<Text/>\r\n</AttributeList>\r\n</MultilingualTextItem>\r\n</ObjectList>\r\n</MultilingualText>\r\n</ObjectList>\r\n</SW.Blocks.GlobalDB>\r\n</Document>";
+
+
 
             if (import)
             {
@@ -1668,8 +839,13 @@ namespace TIA程序生成.ViewModels
                     await Task.Run(async () =>
                     {
                         // 将 XML 文档保存到文件中
-                        doc.Save($"ModbusMaster.xml");
-                        ImportGlobalDB();
+                        Document = Document + $"<MultilingualText ID=\"{String.Format("{0:X}", (StartTIAPortalModel.ModbusInfo.Count) * 10 + 18)}\" CompositionName=\"Title\">\r\n<ObjectList>\r\n<MultilingualTextItem ID=\"{String.Format("{0:X}", (StartTIAPortalModel.ModbusInfo.Count) * 10 + 19)}\" CompositionName=\"Items\">\r\n<AttributeList>\r\n<Culture>zh-CN</Culture>\r\n<Text/>\r\n</AttributeList>\r\n</MultilingualTextItem>\r\n</ObjectList>\r\n</MultilingualText>\r\n</ObjectList>\r\n</SW.Blocks.OB>\r\n</Document>";
+                        XmlDocument xmlDoc = new XmlDocument();
+                        xmlDoc.LoadXml(Document);
+                        xmlDoc.Save("ModbusMaster.xml");
+                        XmlDocument xmlDBDoc = new XmlDocument();
+                        xmlDBDoc.LoadXml(DocumentDB);
+                        xmlDBDoc.Save("ModbusMasterDB.xml");
                         _newTIAPortal.ImportBlockGroups($"{Environment.CurrentDirectory}/ModbusMaster.xml", $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}Group");
                         _newTIAPortal.ImportBlockGroups($"{Environment.CurrentDirectory}/ModbusMasterDB.xml", $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace("/", "_")}Group");
                         _newTIAPortal.CreateInstanceDB();
@@ -1681,496 +857,42 @@ namespace TIA程序生成.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        UpdateLoading(false);
+                        var dialogResult = dialogHostService.Question("致命错误", ex.Message);
+                    });
                     Log.Fatal($"生成Modbus程序时发生错误：{ex.Message}。");
-                    var dialogResult = dialogHostService.Question("致命错误", ex.Message);
-                }
 
-            }
-
-        }
-
-        private void ImportGlobalDB()
-        {
-
-            // 创建XmlDocument对象
-            XmlDocument doc = new XmlDocument();
-
-            // 创建xml声明节点
-            XmlDeclaration xmlDeclaration = doc.CreateXmlDeclaration("1.0", "utf-8", null);
-            doc.AppendChild(xmlDeclaration);
-
-            // 创建根节点<Document>
-            XmlElement documentElement = doc.CreateElement("Document");
-            doc.AppendChild(documentElement);
-
-            // 创建子节点<Engineering>
-            XmlElement engineeringElement = doc.CreateElement("Engineering");
-            engineeringElement.SetAttribute("version", $"V{ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion)}");
-            documentElement.AppendChild(engineeringElement);
-
-            // 创建子节点<SW.Blocks.OB>
-            XmlElement swBlocksObElement = doc.CreateElement("SW.Blocks.GlobalDB");
-            swBlocksObElement.SetAttribute("ID", "0");
-            documentElement.AppendChild(swBlocksObElement);
-
-            // 创建子节点<AttributeList>
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-            swBlocksObElement.AppendChild(attributeListElement);
-            // 创建子节点<AutoNumber>
-            XmlElement autoNumberElement = doc.CreateElement("AutoNumber");
-            autoNumberElement.InnerText = "true";
-            attributeListElement.AppendChild(autoNumberElement);
-
-            // 创建子节点<HeaderAuthor>
-            XmlElement headerAuthorElement = doc.CreateElement("HeaderAuthor");
-            attributeListElement.AppendChild(headerAuthorElement);
-
-            // 创建子节点<HeaderFamily>
-            XmlElement headerFamilyElement = doc.CreateElement("HeaderFamily");
-            attributeListElement.AppendChild(headerFamilyElement);
-
-            // 创建子节点<HeaderName>
-            XmlElement headerNameElement = doc.CreateElement("HeaderName");
-            attributeListElement.AppendChild(headerNameElement);
-
-            // 创建子节点<HeaderVersion>
-            XmlElement headerVersionElement = doc.CreateElement("HeaderVersion");
-            headerVersionElement.InnerText = "0.1";
-            attributeListElement.AppendChild(headerVersionElement);
-
-            // 创建子节点<Interface>
-            XmlElement interfaceElement = doc.CreateElement("Interface");
-            attributeListElement.AppendChild(interfaceElement);
-
-            // 创建子节点<Sections>
-            XmlElement sectionsElement = doc.CreateElement("Sections", "http://www.siemens.com/automation/Openness/SW/Interface/v5");
-            interfaceElement.AppendChild(sectionsElement);
-
-            // 创建子节点<Section>，设置属性Name="Input"
-            XmlElement inputSectionElement = doc.CreateElement("Section");
-            inputSectionElement.SetAttribute("Name", "Static");
-            sectionsElement.AppendChild(inputSectionElement);
-
-            XmlElement initialCallMemberStepElement = doc.CreateElement("Member");
-            initialCallMemberStepElement.SetAttribute("Name", "Step");
-            initialCallMemberStepElement.SetAttribute("Datatype", "USInt");
-            initialCallMemberStepElement.SetAttribute("Remanence", "NonRetain");
-            initialCallMemberStepElement.SetAttribute("Accessibility", "Public");
-            AddAttributeListElement(doc, initialCallMemberStepElement);
-            inputSectionElement.AppendChild(initialCallMemberStepElement);
-
-            XmlElement Comm_Load_DONEElement = doc.CreateElement("Member");
-            Comm_Load_DONEElement.SetAttribute("Name", "Comm_Load_DONE");
-            Comm_Load_DONEElement.SetAttribute("Datatype", "bool");
-            Comm_Load_DONEElement.SetAttribute("Remanence", "NonRetain");
-            Comm_Load_DONEElement.SetAttribute("Accessibility", "Public");
-            AddAttributeListElement(doc, Comm_Load_DONEElement);
-            inputSectionElement.AppendChild(Comm_Load_DONEElement);
-
-            XmlElement Comm_Load_ERRORElement = doc.CreateElement("Member");
-            Comm_Load_ERRORElement.SetAttribute("Name", "Comm_Load_ERROR");
-            Comm_Load_ERRORElement.SetAttribute("Datatype", "bool");
-            Comm_Load_ERRORElement.SetAttribute("Remanence", "NonRetain");
-            Comm_Load_ERRORElement.SetAttribute("Accessibility", "Public");
-            AddAttributeListElement(doc, Comm_Load_ERRORElement);
-            inputSectionElement.AppendChild(Comm_Load_ERRORElement);
-
-            XmlElement Comm_Load_STATUSElement = doc.CreateElement("Member");
-            Comm_Load_STATUSElement.SetAttribute("Name", "Comm_Load_STATUS");
-            Comm_Load_STATUSElement.SetAttribute("Datatype", "Word");
-            Comm_Load_STATUSElement.SetAttribute("Remanence", "NonRetain");
-            Comm_Load_STATUSElement.SetAttribute("Accessibility", "Public");
-            AddAttributeListElement(doc, Comm_Load_STATUSElement);
-            inputSectionElement.AppendChild(Comm_Load_STATUSElement);
-
-            XmlElement initialCallMemberModbus_MasterElement = doc.CreateElement("Member");
-            initialCallMemberModbus_MasterElement.SetAttribute("Name", "Modbus_Master");
-            initialCallMemberModbus_MasterElement.SetAttribute("Datatype", $"Array[1..{StartTIAPortalModel.ModbusInfo.Count}] of Struct");
-            initialCallMemberModbus_MasterElement.SetAttribute("Remanence", "NonRetain");
-            initialCallMemberModbus_MasterElement.SetAttribute("Accessibility", "Public");
-            AddAttributeListElement(doc, initialCallMemberModbus_MasterElement);
-
-            XmlElement initialCallMemberDONEElement = doc.CreateElement("Member");
-            initialCallMemberDONEElement.SetAttribute("Name", "DONE");
-            initialCallMemberDONEElement.SetAttribute("Datatype", "Bool");
-            AddAttributeListElement(doc, initialCallMemberDONEElement);
-            initialCallMemberModbus_MasterElement.AppendChild(initialCallMemberDONEElement);
-
-            XmlElement initialCallMemberBUSYElement = doc.CreateElement("Member");
-            initialCallMemberBUSYElement.SetAttribute("Name", "BUSY");
-            initialCallMemberBUSYElement.SetAttribute("Datatype", "Bool");
-            AddAttributeListElement(doc, initialCallMemberBUSYElement);
-            initialCallMemberModbus_MasterElement.AppendChild(initialCallMemberBUSYElement);
-
-            XmlElement initialCallMemberERRORElement = doc.CreateElement("Member");
-            initialCallMemberERRORElement.SetAttribute("Name", "ERROR");
-            initialCallMemberERRORElement.SetAttribute("Datatype", "Bool");
-            AddAttributeListElement(doc, initialCallMemberERRORElement);
-            initialCallMemberModbus_MasterElement.AppendChild(initialCallMemberERRORElement);
-
-            XmlElement initialCallMemberSTATUSElement = doc.CreateElement("Member");
-            initialCallMemberSTATUSElement.SetAttribute("Name", "STATUS");
-            initialCallMemberSTATUSElement.SetAttribute("Datatype", "Word");
-            AddAttributeListElement(doc, initialCallMemberSTATUSElement);
-            initialCallMemberModbus_MasterElement.AppendChild(initialCallMemberSTATUSElement);
-
-            inputSectionElement.AppendChild(initialCallMemberModbus_MasterElement);
-
-
-            for (int i = 0; i < StartTIAPortalModel.ModbusInfo.Count; i++)
-            {
-                XmlElement initialCallMemberElement = doc.CreateElement("Member");
-                initialCallMemberElement.SetAttribute("Name", $"{(StartTIAPortalModel.ModbusInfo[i].MODE == 0 ? $"Read_DATA_{StartTIAPortalModel.ModbusInfo[i].Name}{StartTIAPortalModel.ModbusInfo[i].MB_No}" : $"Write_DATA_{StartTIAPortalModel.ModbusInfo[i].Name}{StartTIAPortalModel.ModbusInfo[i].MB_No}")}");
-                initialCallMemberElement.SetAttribute("Datatype", $"Array[1..{StartTIAPortalModel.ModbusInfo[i].DATA_LEN}] of {StartTIAPortalModel.ModbusInfo[i].DataType}");
-                initialCallMemberElement.SetAttribute("Remanence", "NonRetain");
-                initialCallMemberElement.SetAttribute("Accessibility", "Public");
-                AddAttributeListElement(doc, initialCallMemberElement);
-                inputSectionElement.AppendChild(initialCallMemberElement);
-
-            }
-
-            // 创建 IsOnlyStoredInLoadMemory 元素
-            XmlElement isOnlyStoredInLoadMemory = doc.CreateElement("IsOnlyStoredInLoadMemory");
-            isOnlyStoredInLoadMemory.InnerText = "false";
-            attributeListElement.AppendChild(isOnlyStoredInLoadMemory);
-
-            // 创建 IsWriteProtectedInAS 元素
-            XmlElement isWriteProtectedInAS = doc.CreateElement("IsWriteProtectedInAS");
-            isWriteProtectedInAS.InnerText = "false";
-            attributeListElement.AppendChild(isWriteProtectedInAS);
-
-            // 创建 MemoryLayout 元素
-            XmlElement memoryLayout = doc.CreateElement("MemoryLayout");
-            memoryLayout.InnerText = "Standard";
-            attributeListElement.AppendChild(memoryLayout);
-
-            // 创建 Name 元素
-            XmlElement name = doc.CreateElement("Name");
-            name.InnerText = $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB";
-            attributeListElement.AppendChild(name);
-            if (ConvertToDoubleWithNoTrailingZeros(SelectedOpennessVersion) >= 18)
-            {
-                //// 创建 Namespace 元素（这里没有内容，所以创建一个空元素）
-                XmlElement namespaceElement = doc.CreateElement("Namespace");
-                attributeListElement.AppendChild(namespaceElement);
-            }
-
-            // 创建 Number 元素
-            XmlElement number = doc.CreateElement("Number");
-            number.InnerText = "3";
-            attributeListElement.AppendChild(number);
-
-            // 创建 ProgrammingLanguage 元素
-            XmlElement programmingLanguage = doc.CreateElement("ProgrammingLanguage");
-            programmingLanguage.InnerText = "DB";
-            attributeListElement.AppendChild(programmingLanguage);
-
-            // 创建根元素 ObjectList
-            XmlElement root = doc.CreateElement("ObjectList");
-            swBlocksObElement.AppendChild(root);
-
-            // 创建第一个 MultilingualText 元素
-            XmlElement multilingualText1 = doc.CreateElement("MultilingualText");
-            root.AppendChild(multilingualText1);
-            multilingualText1.SetAttribute("ID", "1");
-            multilingualText1.SetAttribute("CompositionName", "Comment");
-
-            // 创建 MultilingualText 的 ObjectList 子元素
-            XmlElement multilingualTextObjectList1 = doc.CreateElement("ObjectList");
-            multilingualText1.AppendChild(multilingualTextObjectList1);
-
-            // 创建 MultilingualTextItem 元素
-            XmlElement multilingualTextItem1 = doc.CreateElement("MultilingualTextItem");
-            multilingualTextObjectList1.AppendChild(multilingualTextItem1);
-            multilingualTextItem1.SetAttribute("ID", "2");
-            multilingualTextItem1.SetAttribute("CompositionName", "Items");
-
-            // 创建 AttributeList 元素
-            XmlElement attributeList1 = doc.CreateElement("AttributeList");
-            multilingualTextItem1.AppendChild(attributeList1);
-
-            // 创建 Culture 元素
-            XmlElement culture1 = doc.CreateElement("Culture");
-            culture1.InnerText = "zh-CN";
-            attributeList1.AppendChild(culture1);
-
-            // 创建 Text 元素（这里没有文本内容，所以只创建空元素）
-            XmlElement text1 = doc.CreateElement("Text");
-            attributeList1.AppendChild(text1);
-
-            // 创建第一个 MultilingualText 元素
-            XmlElement multilingualText2 = doc.CreateElement("MultilingualText");
-            root.AppendChild(multilingualText2);
-            multilingualText2.SetAttribute("ID", "3");
-            multilingualText2.SetAttribute("CompositionName", "Title");
-
-            // 创建 MultilingualText 的 ObjectList 子元素
-            XmlElement multilingualTextObjectList2 = doc.CreateElement("ObjectList");
-            multilingualText2.AppendChild(multilingualTextObjectList2);
-
-            // 创建 MultilingualTextItem 元素
-            XmlElement multilingualTextItem2 = doc.CreateElement("MultilingualTextItem");
-            multilingualTextObjectList2.AppendChild(multilingualTextItem2);
-            multilingualTextItem2.SetAttribute("ID", "4");
-            multilingualTextItem2.SetAttribute("CompositionName", "Items");
-
-            // 创建 AttributeList 元素
-            XmlElement attributeList2 = doc.CreateElement("AttributeList");
-            multilingualTextItem2.AppendChild(attributeList2);
-
-            // 创建 Culture 元素
-            XmlElement culture2 = doc.CreateElement("Culture");
-            culture2.InnerText = "zh-CN";
-            attributeList2.AppendChild(culture2);
-
-            // 创建 Text 元素（这里没有文本内容，所以只创建空元素）
-            XmlElement text2 = doc.CreateElement("Text");
-            attributeList2.AppendChild(text2);
-
-            // 将 XML 文档保存到文件中
-            doc.Save($"ModbusMasterDB.xml");
-
-        }
-
-        private void QueryInstructionData(string name, string Version)
-        {
-            try
-            {
-                //连接数据库
-                SqlSugarClient db = new SqlSugarClient(new ConnectionConfig()
-                {
-                    ConnectionString = "Data Source =" + Environment.CurrentDirectory + "/TIAPortalInstructionData.db",
-                    DbType = SqlSugar.DbType.Sqlite,
-                    IsAutoCloseConnection = true,
-                });
-                var conModels = new List<IConditionalModel>();
-                conModels.Add(new ConditionalModel
-                {
-                    FieldName = "Name",
-                    ConditionalType = ConditionalType.Equal,
-                    FieldValue = name
-                });
-                conModels.Add(new ConditionalModel
-                {
-                    FieldName = "Version",
-                    ConditionalType = ConditionalType.Equal,
-                    FieldValue = Version
-                });
-                list = db.Queryable<InstructionData>().AS("InstructionData").Where(conModels).ToList();
-
-            }
-            catch (Exception e)
-            {
-                System.Windows.MessageBox.Show(e.Message);
-            }
-        }
-
-
-        static void AddSymbolElement(XmlDocument doc, XmlElement parentElement, int uid, bool symbol, string componentName)
-        {
-            XmlElement accessElement = doc.CreateElement("Access");
-            accessElement.SetAttribute("Scope", "GlobalVariable");
-            accessElement.SetAttribute("UId", $"{uid}");
-
-            string[] parts = componentName.Split('.');
-            if (symbol)
-            {
-                XmlElement symbolElement = doc.CreateElement("Symbol");
-                accessElement.AppendChild(symbolElement);
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    XmlElement componentElement = doc.CreateElement("Component");
-                    componentElement.SetAttribute("Name", parts[i]);
-                    symbolElement.AppendChild(componentElement);
                 }
             }
-            else
-            {
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    XmlElement componentElement = doc.CreateElement("Constant");
-                    componentElement.SetAttribute("Name", parts[i]);
-                    accessElement.AppendChild(componentElement);
-                }
-            }
-
-            parentElement.AppendChild(accessElement);
         }
 
-        static void AddSymbolGlobalConstantElement(XmlDocument doc, XmlElement parentElement, int uid, bool symbol, string componentName)
-        {
-            XmlElement accessElement = doc.CreateElement("Access");
-            accessElement.SetAttribute("Scope", "GlobalConstant");
-            accessElement.SetAttribute("UId", $"{uid}");
-
-            string[] parts = componentName.Split('.');
-            if (symbol)
-            {
-                XmlElement symbolElement = doc.CreateElement("Symbol");
-                accessElement.AppendChild(symbolElement);
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    XmlElement componentElement = doc.CreateElement("Component");
-                    componentElement.SetAttribute("Name", parts[i]);
-                    symbolElement.AppendChild(componentElement);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    XmlElement componentElement = doc.CreateElement("Constant");
-                    componentElement.SetAttribute("Name", parts[i]);
-                    accessElement.AppendChild(componentElement);
-                }
-            }
-
-            parentElement.AppendChild(accessElement);
-        }
-
-        private void AddSymbolArrayElement(XmlDocument doc, XmlElement parentElement, int uid, int number, string name)
-        {
-            XmlElement accessElement = doc.CreateElement("Access");
-            accessElement.SetAttribute("Scope", "GlobalVariable");
-            accessElement.SetAttribute("UId", $"{uid}");
-
-
-            XmlElement symbolElement = doc.CreateElement("Symbol");
-            accessElement.AppendChild(symbolElement);
-
-            XmlElement componentElement = doc.CreateElement("Component");
-            componentElement.SetAttribute("Name", $"{StartTIAPortalModel.SelectedPort.Replace(" ", "_").Replace(" / ", "_")}ModbusMasterDB");
-            symbolElement.AppendChild(componentElement);
-
-
-            XmlElement componentElementArray = doc.CreateElement("Component");
-            componentElementArray.SetAttribute("Name", "Modbus_Master");
-            componentElementArray.SetAttribute("AccessModifier", "Array");
-
-            XmlElement accessElementArray = doc.CreateElement("Access");
-            accessElementArray.SetAttribute("Scope", "LiteralConstant");
-            componentElementArray.AppendChild(accessElementArray);
-
-            XmlElement constantElement = doc.CreateElement("Constant");
-            accessElementArray.AppendChild(constantElement);
-
-            XmlElement constantTypeElement = doc.CreateElement("ConstantType");
-            constantTypeElement.InnerText = "DInt";
-            constantElement.AppendChild(constantTypeElement);
-
-            XmlElement constantValueElement = doc.CreateElement("ConstantValue");
-            constantValueElement.InnerText = $"{number}";
-            constantElement.AppendChild(constantValueElement);
-
-            symbolElement.AppendChild(componentElementArray);
-
-            XmlElement componentElement3 = doc.CreateElement("Component");
-            componentElement3.SetAttribute("Name", name);
-            symbolElement.AppendChild(componentElement3);
-
-            parentElement.AppendChild(accessElement);
-        }
-
-        static void AddAttributeListElement(XmlDocument doc, XmlElement parentElement)
-        {
-            // 创建根元素 AttributeList
-            XmlElement attributeListElement = doc.CreateElement("AttributeList");
-            parentElement.AppendChild(attributeListElement);
-
-            // 创建并设置第一个 BooleanAttribute 元素
-            XmlElement externalAccessibleElement = doc.CreateElement("BooleanAttribute");
-            externalAccessibleElement.SetAttribute("Name", "ExternalAccessible");
-            externalAccessibleElement.SetAttribute("SystemDefined", "true");
-            externalAccessibleElement.InnerText = "true";
-            attributeListElement.AppendChild(externalAccessibleElement);
-
-            // 创建并设置第二个 BooleanAttribute 元素
-            XmlElement externalVisibleElement = doc.CreateElement("BooleanAttribute");
-            externalVisibleElement.SetAttribute("Name", "ExternalVisible");
-            externalVisibleElement.SetAttribute("SystemDefined", "true");
-            externalVisibleElement.InnerText = "true";
-            attributeListElement.AppendChild(externalVisibleElement);
-
-            // 创建并设置第三个 BooleanAttribute 元素
-            XmlElement externalWritableElement = doc.CreateElement("BooleanAttribute");
-            externalWritableElement.SetAttribute("Name", "ExternalWritable");
-            externalWritableElement.SetAttribute("SystemDefined", "true");
-            externalWritableElement.InnerText = "true";
-            attributeListElement.AppendChild(externalWritableElement);
-
-            // 创建并设置第四个 BooleanAttribute 元素
-            XmlElement setPointElement = doc.CreateElement("BooleanAttribute");
-            setPointElement.SetAttribute("Name", "SetPoint");
-            setPointElement.SetAttribute("SystemDefined", "true");
-            setPointElement.InnerText = "false";
-            attributeListElement.AppendChild(setPointElement);
-
-        }
-
-        static void AddConstantElement(XmlDocument doc, XmlElement parentElement, int uid, string componentName)
-        {
-            XmlElement accessElement = doc.CreateElement("Access");
-            accessElement.SetAttribute("Scope", "LiteralConstant");
-            accessElement.SetAttribute("UId", $"{uid}");
-            string[] parts = componentName.Split('.');
-            XmlElement constantElement = doc.CreateElement("Constant");
-            XmlElement constantTypeElement = doc.CreateElement("ConstantType");
-            constantTypeElement.InnerText = parts[0];
-            constantElement.AppendChild(constantTypeElement);
-            XmlElement constantValueElement = doc.CreateElement("ConstantValue");
-            constantValueElement.InnerText = parts[1];
-            constantElement.AppendChild(constantValueElement);
-            accessElement.AppendChild(constantElement);
-            parentElement.AppendChild(accessElement);
-
-        }
-        static void AddComponenElement(XmlDocument doc, XmlElement parentElement, string uid, string componentName)
-        {
-            XmlElement accessElement = doc.CreateElement("Access");
-            accessElement.SetAttribute("Scope", "GlobalVariable");
-            accessElement.SetAttribute("UId", uid);
-
-            XmlElement componentElement = doc.CreateElement("Constant");
-            componentElement.SetAttribute("Name", componentName);
-            accessElement.AppendChild(componentElement);
-
-            parentElement.AppendChild(accessElement);
-        }
-
-        static void AddWireElement(XmlDocument doc, XmlElement parentElement, string uid, string identUid, string nameConUid, string name, bool reversal)
-        {
-            XmlElement wireElement = doc.CreateElement("Wire");
-            wireElement.SetAttribute("UId", uid);
-
-            XmlElement identConElement = doc.CreateElement("IdentCon");
-            identConElement.SetAttribute("UId", identUid);
-            XmlElement nameConElement = doc.CreateElement("NameCon");
-            nameConElement.SetAttribute("UId", nameConUid);
-            nameConElement.SetAttribute("Name", name);
-            if (reversal)
-            {
-                wireElement.AppendChild(nameConElement);
-                wireElement.AppendChild(identConElement);
-            }
-            else
-            {
-                wireElement.AppendChild(identConElement);
-                wireElement.AppendChild(nameConElement);
-            }
-            parentElement.AppendChild(wireElement);
-
-        }
+        
 
         private async void OpenTIAPortal()
         {
             Log.Information("打开TIA Portal中。");
-            UpdateLoading(true);
-            await Task.Run(async () =>
+            try
             {
-                instTIA = _newTIAPortal.CreateTIAinstance(true);
-            });
-            UpdateLoading(false);
-            Log.Information("TIA Portal已被打开。");
+                UpdateLoading(true);
+                await Task.Run(async () =>
+                {
+                    instTIA = _newTIAPortal.CreateTIAinstance(true);
+                });
+                UpdateLoading(false);
+                Log.Information("TIA Portal已被打开。");
+            }
+            catch (Exception ex)
+            {
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateLoading(false);
+                    var dialogResult = dialogHostService.Question("致命错误", ex.Message);
+                });
+                Log.Fatal($"打开TIA Portal时发生错误：{ex.Message}。");
+            }
+
         }
 
         static double ConvertToDoubleWithNoTrailingZeros(string input)
@@ -2207,5 +929,791 @@ namespace TIA程序生成.ViewModels
         {
             base.OnNavigatedTo(navigationContext);
         }
-    }
-}
+
+        string originalXml = @"<SW.Blocks.CompileUnit ID=""12"" CompositionName=""CompileUnits"">
+<AttributeList>
+<NetworkSource>
+<FlgNet xmlns=""http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4"">
+<Parts>
+<Access Scope=""GlobalVariable"" UId=""21"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Step""/>
+</Symbol>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""22"">
+<Constant>
+<ConstantType>USInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""23"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""24"">
+<Constant>
+<ConstantType>USInt</ConstantType>
+<ConstantValue>0</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""25"">
+<Constant>
+<ConstantType>UDInt</ConstantType>
+<ConstantValue>5247</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""26"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>2</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""27"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Read_DATA_tgreg1""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""28"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Modbus_Master"" AccessModifier=""Array"">
+<Access Scope=""LiteralConstant"">
+<Constant>
+<ConstantType>DInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+</Component>
+<Component Name=""DONE""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""29"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Modbus_Master"" AccessModifier=""Array"">
+<Access Scope=""LiteralConstant"">
+<Constant>
+<ConstantType>DInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+</Component>
+<Component Name=""BUSY""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""30"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Modbus_Master"" AccessModifier=""Array"">
+<Access Scope=""LiteralConstant"">
+<Constant>
+<ConstantType>DInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+</Component>
+<Component Name=""ERROR""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""31"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Modbus_Master"" AccessModifier=""Array"">
+<Access Scope=""LiteralConstant"">
+<Constant>
+<ConstantType>DInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+</Component>
+<Component Name=""STATUS""/>
+</Symbol>
+</Access>
+<Part Name=""Eq"" UId=""32"">
+<TemplateValue Name=""SrcType"" Type=""Type"">USInt</TemplateValue>
+</Part>
+<Part Name=""Modbus_Master"" Version=""5.1"" UId=""33"">
+<Instance Scope=""GlobalVariable"" UId=""34"">
+<Component Name=""Modbus_Master_DB""/>
+</Instance>
+</Part>
+</Parts>
+<Wires>
+<Wire UId=""35"">
+<Powerrail/>
+<NameCon UId=""33"" Name=""en""/>
+<NameCon UId=""32"" Name=""pre""/>
+</Wire>
+<Wire UId=""36"">
+<IdentCon UId=""21""/>
+<NameCon UId=""32"" Name=""in1""/>
+</Wire>
+<Wire UId=""37"">
+<IdentCon UId=""22""/>
+<NameCon UId=""32"" Name=""in2""/>
+</Wire>
+<Wire UId=""38"">
+<NameCon UId=""32"" Name=""out""/>
+<NameCon UId=""33"" Name=""REQ""/>
+</Wire>
+<Wire UId=""39"">
+<IdentCon UId=""23""/>
+<NameCon UId=""33"" Name=""MB_ADDR""/>
+</Wire>
+<Wire UId=""40"">
+<IdentCon UId=""24""/>
+<NameCon UId=""33"" Name=""MODE""/>
+</Wire>
+<Wire UId=""41"">
+<IdentCon UId=""25""/>
+<NameCon UId=""33"" Name=""DATA_ADDR""/>
+</Wire>
+<Wire UId=""42"">
+<IdentCon UId=""26""/>
+<NameCon UId=""33"" Name=""DATA_LEN""/>
+</Wire>
+<Wire UId=""43"">
+<IdentCon UId=""27""/>
+<NameCon UId=""33"" Name=""DATA_PTR""/>
+</Wire>
+<Wire UId=""44"">
+<NameCon UId=""33"" Name=""DONE""/>
+<IdentCon UId=""28""/>
+</Wire>
+<Wire UId=""45"">
+<NameCon UId=""33"" Name=""BUSY""/>
+<IdentCon UId=""29""/>
+</Wire>
+<Wire UId=""46"">
+<NameCon UId=""33"" Name=""ERROR""/>
+<IdentCon UId=""30""/>
+</Wire>
+<Wire UId=""47"">
+<NameCon UId=""33"" Name=""STATUS""/>
+<IdentCon UId=""31""/>
+</Wire>
+</Wires>
+</FlgNet>
+</NetworkSource>
+<ProgrammingLanguage>LAD</ProgrammingLanguage>
+</AttributeList>
+<ObjectList>
+<MultilingualText ID=""13"" CompositionName=""Comment"">
+<ObjectList>
+<MultilingualTextItem ID=""14"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>Modbus主站读取保持寄存器数据</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+<MultilingualText ID=""15"" CompositionName=""Title"">
+<ObjectList>
+<MultilingualTextItem ID=""16"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>第一步：""ModbusMasterOpenness.Step""值=1时触发“Modbus_Master”指令读取 Modbus RTU 从站地址1保持寄存器5247地址开始的2个字长的数据，将其存放于“""ModbusMasterOpenness"".tgreg1”指定的地址中</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+</ObjectList>
+</SW.Blocks.CompileUnit>";
+        string originalXml1 = @"<SW.Blocks.CompileUnit ID=""17"" CompositionName=""CompileUnits"">
+<AttributeList>
+<NetworkSource>
+<FlgNet xmlns=""http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4"">
+<Parts>
+<Access Scope=""GlobalVariable"" UId=""21"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Step""/>
+</Symbol>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""22"">
+<Constant>
+<ConstantType>USInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""23"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Modbus_Master"" AccessModifier=""Array"">
+<Access Scope=""LiteralConstant"">
+<Constant>
+<ConstantType>DInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+</Component>
+<Component Name=""DONE""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""24"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Modbus_Master"" AccessModifier=""Array"">
+<Access Scope=""LiteralConstant"">
+<Constant>
+<ConstantType>DInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+</Component>
+<Component Name=""ERROR""/>
+</Symbol>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""25"">
+<Constant>
+<ConstantType>USInt</ConstantType>
+<ConstantValue>2</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""26"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Step""/>
+</Symbol>
+</Access>
+<Part Name=""Eq"" UId=""27"">
+<TemplateValue Name=""SrcType"" Type=""Type"">USInt</TemplateValue>
+</Part>
+<Part Name=""Contact"" UId=""28""/>
+<Part Name=""Contact"" UId=""29""/>
+<Part Name=""O"" UId=""30"">
+<TemplateValue Name=""Card"" Type=""Cardinality"">2</TemplateValue>
+</Part>
+<Part Name=""Move"" UId=""31"" DisabledENO=""true"">
+<TemplateValue Name=""Card"" Type=""Cardinality"">1</TemplateValue>
+</Part>
+</Parts>
+<Wires>
+<Wire UId=""32"">
+<Powerrail/>
+<NameCon UId=""27"" Name=""pre""/>
+</Wire>
+<Wire UId=""33"">
+<IdentCon UId=""21""/>
+<NameCon UId=""27"" Name=""in1""/>
+</Wire>
+<Wire UId=""34"">
+<IdentCon UId=""22""/>
+<NameCon UId=""27"" Name=""in2""/>
+</Wire>
+<Wire UId=""35"">
+<NameCon UId=""27"" Name=""out""/>
+<NameCon UId=""28"" Name=""in""/>
+<NameCon UId=""29"" Name=""in""/>
+</Wire>
+<Wire UId=""36"">
+<IdentCon UId=""23""/>
+<NameCon UId=""28"" Name=""operand""/>
+</Wire>
+<Wire UId=""37"">
+<NameCon UId=""28"" Name=""out""/>
+<NameCon UId=""30"" Name=""in1""/>
+</Wire>
+<Wire UId=""38"">
+<IdentCon UId=""24""/>
+<NameCon UId=""29"" Name=""operand""/>
+</Wire>
+<Wire UId=""39"">
+<NameCon UId=""29"" Name=""out""/>
+<NameCon UId=""30"" Name=""in2""/>
+</Wire>
+<Wire UId=""40"">
+<NameCon UId=""30"" Name=""out""/>
+<NameCon UId=""31"" Name=""en""/>
+</Wire>
+<Wire UId=""41"">
+<IdentCon UId=""25""/>
+<NameCon UId=""31"" Name=""in""/>
+</Wire>
+<Wire UId=""42"">
+<NameCon UId=""31"" Name=""out1""/>
+<IdentCon UId=""26""/>
+</Wire>
+</Wires>
+</FlgNet>
+</NetworkSource>
+<ProgrammingLanguage>LAD</ProgrammingLanguage>
+</AttributeList>
+<ObjectList>
+<MultilingualText ID=""18"" CompositionName=""Comment"">
+<ObjectList>
+<MultilingualTextItem ID=""19"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>转到第2步</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+<MultilingualText ID=""1A"" CompositionName=""Title"">
+<ObjectList>
+<MultilingualTextItem ID=""1B"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>第1步完成位或错误位作为条件转到第2步，使能MOVE指令，对步地址""ModbusMasterOpenness.Step""赋值2</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+</ObjectList>
+</SW.Blocks.CompileUnit>";
+        string originalXml2 = @"<SW.Blocks.CompileUnit ID=""8"" CompositionName=""CompileUnits"">
+<AttributeList>
+<NetworkSource>
+<FlgNet xmlns=""http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4"">
+<Parts>
+<Access Scope=""GlobalVariable"" UId=""21"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Comm_Load_DONE""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalConstant"" UId=""22"">
+<Constant Name=""Local~CM_1241_(RS422_485)_1""/>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""23"">
+<Constant>
+<ConstantType>UDInt</ConstantType>
+<ConstantValue>9600</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""24"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>0</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""25"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>0</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""26"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>0</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""27"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>0</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""28"">
+<Constant>
+<ConstantType>UInt</ConstantType>
+<ConstantValue>1000</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""29"">
+<Symbol>
+<Component Name=""Modbus_Master_DB""/>
+<Component Name=""MB_DB""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""30"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Comm_Load_DONE""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""31"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Comm_Load_ERROR""/>
+</Symbol>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""32"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Comm_Load_STATUS""/>
+</Symbol>
+</Access>
+<Part Name=""Contact"" UId=""33"">
+<Negated Name=""operand""/>
+</Part>
+<Part Name=""Modbus_Comm_Load"" Version=""5.0"" UId=""34"">
+<Instance Scope=""GlobalVariable"" UId=""35"">
+<Component Name=""Modbus_Comm_Load_DB""/>
+</Instance>
+</Part>
+</Parts>
+<Wires>
+<Wire UId=""36"">
+<Powerrail/>
+<NameCon UId=""34"" Name=""en""/>
+<NameCon UId=""33"" Name=""in""/>
+</Wire>
+<Wire UId=""37"">
+<IdentCon UId=""21""/>
+<NameCon UId=""33"" Name=""operand""/>
+</Wire>
+<Wire UId=""38"">
+<NameCon UId=""33"" Name=""out""/>
+<NameCon UId=""34"" Name=""REQ""/>
+</Wire>
+<Wire UId=""39"">
+<IdentCon UId=""22""/>
+<NameCon UId=""34"" Name=""PORT""/>
+</Wire>
+<Wire UId=""40"">
+<IdentCon UId=""23""/>
+<NameCon UId=""34"" Name=""BAUD""/>
+</Wire>
+<Wire UId=""41"">
+<IdentCon UId=""24""/>
+<NameCon UId=""34"" Name=""PARITY""/>
+</Wire>
+<Wire UId=""42"">
+<IdentCon UId=""25""/>
+<NameCon UId=""34"" Name=""FLOW_CTRL""/>
+</Wire>
+<Wire UId=""43"">
+<IdentCon UId=""26""/>
+<NameCon UId=""34"" Name=""RTS_ON_DLY""/>
+</Wire>
+<Wire UId=""44"">
+<IdentCon UId=""27""/>
+<NameCon UId=""34"" Name=""RTS_OFF_DLY""/>
+</Wire>
+<Wire UId=""45"">
+<IdentCon UId=""28""/>
+<NameCon UId=""34"" Name=""RESP_TO""/>
+</Wire>
+<Wire UId=""46"">
+<IdentCon UId=""29""/>
+<NameCon UId=""34"" Name=""MB_DB""/>
+</Wire>
+<Wire UId=""47"">
+<NameCon UId=""34"" Name=""DONE""/>
+<IdentCon UId=""30""/>
+</Wire>
+<Wire UId=""48"">
+<NameCon UId=""34"" Name=""ERROR""/>
+<IdentCon UId=""31""/>
+</Wire>
+<Wire UId=""49"">
+<NameCon UId=""34"" Name=""STATUS""/>
+<IdentCon UId=""32""/>
+</Wire>
+</Wires>
+</FlgNet>
+</NetworkSource>
+<ProgrammingLanguage>LAD</ProgrammingLanguage>
+</AttributeList>
+<ObjectList>
+<MultilingualText ID=""9"" CompositionName=""Comment"">
+<ObjectList>
+<MultilingualTextItem ID=""A"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>Modbus主站初始化</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+<MultilingualText ID=""B"" CompositionName=""Title"">
+<ObjectList>
+<MultilingualTextItem ID=""C"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>在S7-1200启动的第一个扫描周期，将Modbus RTU通信的RS485端口参数初始化为波特率：9600，无校验，无流控，响应超时1000ms（Modbus RTU默认为数据位：8位，停止位：1位） MB_DB指向""Modbus_Master""指令所使用的背景数据块引用</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+</ObjectList>
+</SW.Blocks.CompileUnit>";
+        string originalXml3 = @"<SW.Blocks.CompileUnit ID=""D"" CompositionName=""CompileUnits"">
+<AttributeList>
+<NetworkSource>
+<FlgNet xmlns=""http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4"">
+<Parts>
+<Access Scope=""GlobalVariable"" UId=""21"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Comm_Load_DONE""/>
+</Symbol>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""22"">
+<Constant>
+<ConstantType>USInt</ConstantType>
+<ConstantValue>1</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""23"">
+<Symbol>
+<Component Name=""CM_1241_(RS422/485)_1ModbusMasterDB""/>
+<Component Name=""Step""/>
+</Symbol>
+</Access>
+<Part Name=""Contact"" UId=""24""/>
+<Part Name=""Move"" UId=""25"" DisabledENO=""true"">
+<TemplateValue Name=""Card"" Type=""Cardinality"">1</TemplateValue>
+</Part>
+</Parts>
+<Wires>
+<Wire UId=""26"">
+<Powerrail/>
+<NameCon UId=""24"" Name=""in""/>
+</Wire>
+<Wire UId=""27"">
+<IdentCon UId=""21""/>
+<NameCon UId=""24"" Name=""operand""/>
+</Wire>
+<Wire UId=""28"">
+<NameCon UId=""24"" Name=""out""/>
+<NameCon UId=""25"" Name=""en""/>
+</Wire>
+<Wire UId=""29"">
+<IdentCon UId=""22""/>
+<NameCon UId=""25"" Name=""in""/>
+</Wire>
+<Wire UId=""30"">
+<NameCon UId=""25"" Name=""out1""/>
+<IdentCon UId=""23""/>
+</Wire>
+</Wires>
+</FlgNet>
+</NetworkSource>
+<ProgrammingLanguage>LAD</ProgrammingLanguage>
+</AttributeList>
+<ObjectList>
+<MultilingualText ID=""E"" CompositionName=""Comment"">
+<ObjectList>
+<MultilingualTextItem ID=""F"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>转到第一步</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+<MultilingualText ID=""10"" CompositionName=""Title"">
+<ObjectList>
+<MultilingualTextItem ID=""11"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>初始化完成位使能MOVE指令，对步地址""ModbusMasterOpenness.Step""赋值1</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+</ObjectList>
+</SW.Blocks.CompileUnit>";
+        string originalXml4 = @"
+<SW.Blocks.OB ID=""0"">
+<AttributeList>
+<AutoNumber>true</AutoNumber>
+<HeaderAuthor/>
+<HeaderFamily/>
+<HeaderName/>
+<HeaderVersion>0.1</HeaderVersion>
+<Interface>
+<Sections xmlns=""http://www.siemens.com/automation/Openness/SW/Interface/v5"">
+<Section Name=""Input"">
+<Member Name=""Initial_Call"" Datatype=""Bool"" Accessibility=""Public"" Informative=""true"">
+<Comment>
+<MultiLanguageText Lang=""en-US"">Initial call of this OB</MultiLanguageText>
+</Comment>
+</Member>
+<Member Name=""Remanence"" Datatype=""Bool"" Accessibility=""Public"" Informative=""true"">
+<Comment>
+<MultiLanguageText Lang=""en-US"">=True, if remanent data are available</MultiLanguageText>
+</Comment>
+</Member>
+</Section>
+<Section Name=""Temp""/>
+<Section Name=""Constant""/>
+</Sections>
+</Interface>
+<IsIECCheckEnabled>false</IsIECCheckEnabled>
+<MemoryLayout>Optimized</MemoryLayout>
+<Name>CM_1241_(RS422_485)_1ModbusMaster</Name>";
+        string originalXml5 = @"<Number>124</Number>
+<ProgrammingLanguage>LAD</ProgrammingLanguage>
+<SecondaryType>ProgramCycle</SecondaryType>
+<SetENOAutomatically>false</SetENOAutomatically>
+</AttributeList>
+<ObjectList>
+<MultilingualText CompositionName=""Comment"" ID=""1"">
+<ObjectList>
+<MultilingualTextItem ID=""2"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>1.免责声明 1.软件使用 本软件是为了提供便利和效率而设计的。开发者已尽力确保软件的功能性和稳定性，但无法保证软件在所有情况下都能无误运行。用户应自行承担使用软件的风险。 2.免责声明 开发者不对因使用或无法使用本软件而产生的任何直接、间接、偶然、特殊或惩罚性的损害承担责任，包括但不限于数据损失、设备损坏、业务中断、利润损失等。 3.软件限制 本软件可能存在已知或未知的缺陷和漏洞。开发者保留对软件进行修改、更新或停止支持的权利，且不保证提供任何形式的技术支持或更新服务。</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+<SW.Blocks.CompileUnit ID=""3"" CompositionName=""CompileUnits"">
+<AttributeList>
+<NetworkSource>
+<FlgNet xmlns=""http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4"">
+<Parts>
+<Access Scope=""GlobalVariable"" UId=""21"">
+<Symbol>
+<Component Name=""FirstScan""/>
+</Symbol>
+</Access>
+<Access Scope=""LiteralConstant"" UId=""22"">
+<Constant>
+<ConstantType>USInt</ConstantType>
+<ConstantValue>4</ConstantValue>
+</Constant>
+</Access>
+<Access Scope=""GlobalVariable"" UId=""23"">
+<Symbol>
+<Component Name=""Modbus_Comm_Load_DB""/>
+<Component Name=""MODE""/>
+</Symbol>
+</Access>
+<Part Name=""Contact"" UId=""24""/>
+<Part Name=""Move"" UId=""25"" DisabledENO=""true"">
+<TemplateValue Name=""Card"" Type=""Cardinality"">1</TemplateValue>
+</Part>
+</Parts>
+<Wires>
+<Wire UId=""26"">
+<Powerrail/>
+<NameCon UId=""24"" Name=""in""/>
+</Wire>
+<Wire UId=""27"">
+<IdentCon UId=""21""/>
+<NameCon UId=""24"" Name=""operand""/>
+</Wire>
+<Wire UId=""28"">
+<NameCon UId=""24"" Name=""out""/>
+<NameCon UId=""25"" Name=""en""/>
+</Wire>
+<Wire UId=""29"">
+<IdentCon UId=""22""/>
+<NameCon UId=""25"" Name=""in""/>
+</Wire>
+<Wire UId=""30"">
+<NameCon UId=""25"" Name=""out1""/>
+<IdentCon UId=""23""/>
+</Wire>
+</Wires>
+</FlgNet>
+</NetworkSource>
+<ProgrammingLanguage>LAD</ProgrammingLanguage>
+</AttributeList>
+<ObjectList>
+<MultilingualText ID=""4"" CompositionName=""Comment"">
+<ObjectList>
+<MultilingualTextItem ID=""5"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>设置通信端口模式=4 Modbus通信</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+<MultilingualText ID=""6"" CompositionName=""Title"">
+<ObjectList>
+<MultilingualTextItem ID=""7"" CompositionName=""Items"">
+<AttributeList>
+<Culture>zh-CN</Culture>
+<Text>在S7-1200启动的第一个扫描周期，将数值4传送到在“Modbus_Comm_Load.DB”MODE，将工作模式设置为半双工 RS485两线模式</Text>
+</AttributeList>
+</MultilingualTextItem>
+</ObjectList>
+</MultilingualText>
+</ObjectList>
+</SW.Blocks.CompileUnit>";
+        string originalXml6 = @"
+<SW.Blocks.GlobalDB ID=""0"">
+<AttributeList>
+<AutoNumber>true</AutoNumber>
+<HeaderAuthor/>
+<HeaderFamily/>
+<HeaderName/>
+<HeaderVersion>0.1</HeaderVersion>
+<Interface>
+<Sections xmlns=""http://www.siemens.com/automation/Openness/SW/Interface/v5"">
+<Section Name=""Static"">
+<Member Name=""Step"" Datatype=""USInt"" Remanence=""NonRetain"" Accessibility=""Public"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+<Member Name=""Comm_Load_DONE"" Datatype=""Bool"" Remanence=""NonRetain"" Accessibility=""Public"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+<Member Name=""Comm_Load_ERROR"" Datatype=""Bool"" Remanence=""NonRetain"" Accessibility=""Public"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+<Member Name=""Comm_Load_STATUS"" Datatype=""Word"" Remanence=""NonRetain"" Accessibility=""Public"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>";
+        string originalXml7 = @"<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+<Member Name=""DONE"" Datatype=""Bool"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+<Member Name=""BUSY"" Datatype=""Bool"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+<Member Name=""ERROR"" Datatype=""Bool"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+<Member Name=""STATUS"" Datatype=""Word"">
+<AttributeList>
+<BooleanAttribute Name=""ExternalAccessible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalVisible"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""ExternalWritable"" SystemDefined=""true"">true</BooleanAttribute>
+<BooleanAttribute Name=""SetPoint"" SystemDefined=""true"">false</BooleanAttribute>
+</AttributeList>
+</Member>
+</Member>";
+    } }

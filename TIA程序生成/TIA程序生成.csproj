@@ -185,6 +185,7 @@
     <Compile Include="Common\DataType\ConvertType.cs" />
     <Compile Include="Common\Event\Link.cs" />
     <Compile Include="Common\Interfaces\CheckVersion.cs" />
+    <Compile Include="Common\Models\Configurations\Configuration.cs" />
     <Compile Include="Common\Models\LogsModel.cs" />
     <Compile Include="Common\Models\MenuBar.cs" />
     <Compile Include="Common\Models\StartModel.cs" />
@@ -342,8 +343,6 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <Resource Include="Assets\Fonts\iconfont.ttf" />
-    <None Include="bin\Debug\TIAPortalInstructionData.db" />
-    <None Include="bin\Release\TIAPortalInstructionData.db" />
     <None Include="OpennessVersion.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>OpennessVersion.Designer.cs</LastGenOutput>
@@ -681,6 +680,7 @@
       <Name>MyLibrary</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\MaterialDesignThemes.4.7.0\build\MaterialDesignThemes.targets" Condition="Exists('..\packages\MaterialDesignThemes.4.7.0\build\MaterialDesignThemes.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
