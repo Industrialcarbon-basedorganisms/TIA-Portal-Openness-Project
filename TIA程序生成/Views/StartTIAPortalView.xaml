@@ -882,12 +882,6 @@
                             CommandParameter="ImportPrograms"
                             Content="生成"
                             Cursor="Hand" />
-                        <Button
-                            Margin="5"
-                            Command="{Binding ExecuteCommand}"
-                            CommandParameter="ImportProgramsxml"
-                            Content="生成xml"
-                            Cursor="Hand" />
                     </StackPanel>
 
 
